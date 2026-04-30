@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    background-color: #0a0a0a;
+    color: #fafafa;
+  }
+
+  body {
+    font-feature-settings: "tnum" on, "ss01" on;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *::selection {
+    background-color: #00d56340;
+    color: #fafafa;
+  }
+
+  *:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #0a0a0a,
+      0 0 0 4px #00d563;
+    border-radius: 8px;
+  }
+
+  /* Scrollbar — slim and dark */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1f1f1f;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2a2a2a;
+  }
+}
+
+@layer components {
+  .surface {
+    background-color: #111111;
+    border: 1px solid #1f1f1f;
+    border-radius: 12px;
+  }
+
+  .surface-elevated {
+    background-color: #161616;
+    border: 1px solid #1f1f1f;
+    border-radius: 12px;
+  }
+
+  .surface-hover {
+    transition:
+      border-color 150ms ease-out,
+      background-color 150ms ease-out;
+  }
+  .surface-hover:hover {
+    border-color: #00d56340;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background-color: #ff3b3b;
+    box-shadow: 0 0 0 4px #ff3b3b40;
+    animation: live-pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #161616 0%,
+      #1c1c1c 50%,
+      #161616 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+    border-radius: 8px;
+  }
+
+  .tabular {
+    font-feature-settings: "tnum" on;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .container-page {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 80rem;
+  }
+  @media (min-width: 640px) {
+    .container-page {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  .safe-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  .safe-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
