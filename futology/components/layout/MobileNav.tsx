@@ -5,8 +5,13 @@ import { usePathname } from "next/navigation";
 import { PRIMARY_NAV } from "@/lib/constants/navigation";
 import { cn } from "@/lib/utils/cn";
 
+const HIDE_NAV_ON = ["/login", "/onboarding"];
+
 export function MobileNav() {
   const pathname = usePathname();
+  if (HIDE_NAV_ON.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return null;
+  }
 
   return (
     <nav
