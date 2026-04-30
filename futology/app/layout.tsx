@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   description:
     "The definitive football intelligence platform — live scores, ML-powered match prediction, player clusters, sentiment, tactics, transfer values, and fantasy optimization.",
   applicationName: "FUTOLOGY",
+  manifest: "/manifest.json",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   ),
