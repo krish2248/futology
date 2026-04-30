@@ -8,11 +8,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Card } from "@/components/shared/Card";
-import { LiveBadge } from "@/components/shared/LiveBadge";
 import { StatTile } from "@/components/shared/StatTile";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { LiveStrip } from "@/components/cards/MatchCard";
-import { getDemoMatches, liveMatches } from "@/lib/data/demoMatches";
+import { HomeLive } from "./HomeLive";
 
 const QUICK_LINKS = [
   {
@@ -36,9 +34,6 @@ const QUICK_LINKS = [
 ] as const;
 
 export default function HomePage() {
-  const matches = getDemoMatches();
-  const live = liveMatches(matches);
-
   return (
     <div className="space-y-8">
       <section className="surface relative overflow-hidden p-6 md:p-10">
@@ -78,32 +73,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section>
-        <PageHeader
-          title="Live now"
-          description={
-            live.length > 0
-              ? `${live.length} match${live.length === 1 ? "" : "es"} in progress.`
-              : "No live matches right now. Check back at kickoff."
-          }
-          action={live.length > 0 ? <LiveBadge /> : null}
-        />
-        {live.length > 0 ? (
-          <LiveStrip matches={live} />
-        ) : (
-          <Card className="flex flex-col items-start gap-2">
-            <p className="text-sm text-text-secondary">
-              Nothing live. Browse upcoming fixtures instead.
-            </p>
-            <Link
-              href="/scores"
-              className="text-sm font-medium text-accent transition-colors hover:text-accent-hover"
-            >
-              See upcoming fixtures →
-            </Link>
-          </Card>
-        )}
-      </section>
+      <HomeLive />
 
       <section>
         <h2 className="mb-3 text-lg font-semibold tracking-tight">Jump in</h2>
