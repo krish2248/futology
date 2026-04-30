@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { Providers } from "@/components/providers/Providers";
 import "./globals.css";
 
 const inter = Inter({
@@ -50,11 +51,13 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <Navbar />
-        <main id="main" className="container-page pb-24 pt-4 md:pb-12 md:pt-8">
-          {children}
-        </main>
-        <MobileNav />
+        <Providers>
+          <Navbar />
+          <main id="main" className="container-page pb-24 pt-4 md:pb-12 md:pt-8">
+            {children}
+          </main>
+          <MobileNav />
+        </Providers>
       </body>
     </html>
   );
