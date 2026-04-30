@@ -8,9 +8,10 @@
 ## 🎯 Current Phase
 
 **Phase 0 — Repo & Environment Setup** ✅ shell complete (Supabase + Husky/CI deferred until backend keys exist)
-**Phase 1 — Auth, Onboarding, Shell** — layout shell already in place; auth + onboarding wizard outstanding
+**Phase 1 — Auth, Onboarding, Shell** ✅ in demo mode — login + 3-step onboarding + Cmd+K + notifications + middleware all functional. Real Supabase wires up when keys arrive.
+**Phase 2 — Live Data Layer & Core Pages** ⏳ partial — MatchCard + PredictionCard built and fed by deterministic demo data. Real API-Football wiring pending.
 
-Next session resumes: Phase 1 — wire Supabase email-OTP login + the 3-step onboarding wizard. Live-data wiring (Phase 2) follows.
+Next session resumes: Phase 2 properly — once Supabase + API-Football keys are provided, swap the demo data layer for real API routes and add live polling.
 
 ---
 
@@ -82,18 +83,70 @@ Next session resumes: Phase 1 — wire Supabase email-OTP login + the 3-step onb
 - **Real shadcn/ui components:** the bible names shadcn primitives (Button, Sheet, Tabs, Dialog, etc.). I've built the equivalents inline as plain Tailwind components for now (Card, EmptyState, StatTile). When we hit Phase 1 auth UI, we'll either install shadcn or keep going with our own — decide then.
 - **Framer Motion / TanStack Query / Zustand / Recharts / Plotly:** not installed yet. Will install per phase as features land (auth doesn't need any of them; live scores will need TanStack Query).
 
+**Session 1 part 2 additions (continued working):**
+
+*Auth, onboarding, route protection*
+- `lib/store/session.ts` — Zustand store with localStorage persist; sets `futology_session` cookie on sign in; `signIn`, `signOut`, `completeOnboarding`, `toggleLeague/Club/Player/Tournament`, `reset`. Designed so swapping in Supabase changes only the persistence layer.
+- `hooks/useHydratedSession.ts` — `useIsClient()` to avoid SSR hydration mismatch on persisted state.
+- `middleware.ts` — gate every dashboard route on `futology_session` cookie; allowlist `/login` and `/onboarding`; preserve a `?next=` redirect target.
+- `app/login/page.tsx` — Framer-animated three-state flow (form → sent → ready) with email validation. Sets the demo session.
+- `app/onboarding/page.tsx` — three-step wizard: leagues (20) → clubs (40+, debounced search) → players (24) + tournaments (10). Progress bar springs, step transitions slide, confetti fires on completion.
+
+*Seed data (`lib/data/`)*
+- `leagues.ts` — 20 leagues with API-Football IDs (matches bible §11 Phase 1)
+- `clubs.ts` — 40+ clubs across the top 6 leagues, with `clubsByLeague`, `findClub`, and `CLUB_QUICK_PICKS`
+- `players.ts` — 24 star players with positions and nationalities
+- `tournaments.ts` — 10 majors (World Cup, Euros, Copa, AFCON, Asian Cup, CWC, plus domestic cups)
+- `demoMatches.ts` — relative-time-based matches: 3 live, 4 finished, 11 scheduled across 6 leagues; helpers for filter & league grouping
+- `demoPredictions.ts` — deterministic ML-style predictions (home/draw/away probabilities, predicted score, confidence, key factors)
+
+*Components*
+- `components/cards/MatchCard.tsx` — three implicit variants via match status; LiveStrip wrapper for horizontal scroll on Home
+- `components/predictions/WinProbabilityBar.tsx` — segmented bar with dominant-side accent
+- `components/predictions/PredictionCard.tsx` — ML badge, prob bar, predicted-score trio, expandable key factors, "Use this prediction" + "Save"
+- `components/shared/SearchModal.tsx` — Cmd+K / `/` shortcut, debounced 300 ms, keyboard nav, 4 tabs (All/Teams/Players/Leagues), recent in localStorage
+- `components/layout/NotificationBell.tsx` — popover with unread count, mark-all-read, click-outside + Esc to close
+- `lib/utils/format.ts` — `formatKickoff`, `formatScore`, `formatRelativeMinute`
+
+*Wired pages*
+- `/` — hero + live strip pulling 3 live demo matches
+- `/scores` — filter tabs (All/Live/Finished/Scheduled with counts), grouped by league, MatchCard everywhere
+- `/predictions` — AI tab now shows 8 PredictionCards with deterministic seeded data; other tabs are designed empty states pointing at later phases
+- `/profile` — real user from Zustand, sign-out wired, follow counts and previews from store
+
+*PWA*
+- `public/manifest.json`, `public/icon.svg`, `app/icon.svg` for the App Router favicon convention, `public/robots.txt`
+- `metadata.manifest = "/manifest.json"` in `app/layout.tsx`
+
+**Verified working (final smoke test):**
+- `npx next build` → 20 static routes, middleware 25.6 KB. Login 4.45 KB / 143 KB FLJS, onboarding 10.3 KB / 150 KB.
+- `npx tsc --noEmit` → clean.
+- Dev server smoke test:
+  - `GET /` (no cookie) → **307** redirect to `/login` ✓
+  - `GET /login` → 200 ✓
+  - `GET /onboarding` → 200 ✓
+  - `GET /scores` (with `futology_session` cookie) → 200 (39 KB) ✓
+  - `GET /predictions` (with cookie) → 200 (52 KB) ✓
+
 **Next session starts here:**
 
-1. Read `SESSION.md` (this file) end-to-end. Confirm Phase 0 is done. Confirm we're starting Phase 1.
-2. Confirm with the user whether the Supabase project is created. If yes, ask for the URL + anon key + service role key. If no, lay the auth code with `.env.local` placeholders and note it's blocked.
-3. Build Phase 1 in this order:
-   - Install: `@supabase/supabase-js`, `@supabase/ssr`, `framer-motion`, `@tanstack/react-query`, `zustand`, `canvas-confetti`, `date-fns`.
-   - `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/middleware.ts`.
-   - `middleware.ts` at project root for route protection.
-   - `app/(auth)/login/page.tsx` — email OTP form, 3 states (initial / sent / verifying).
-   - `app/(auth)/onboarding/page.tsx` — 3-step wizard (leagues → clubs → players + tournaments) with progress bar + confetti.
-   - Wire `useUser` and `useUserPreferences` hooks.
-4. Run lint + typecheck + build before declaring Phase 1 done.
+1. Read `SESSION.md`. Confirm Phase 1 demo-mode is in place.
+2. Ask the user for: Supabase project URL + anon key + service role, API-Football RapidAPI key, NewsAPI key, Reddit credentials.
+3. **Cut over from demo to real:**
+   - Install `@supabase/supabase-js`, `@supabase/ssr`, `@tanstack/react-query`.
+   - Add `lib/supabase/{client,server,middleware}.ts`.
+   - Apply the schema from bible §6 in the Supabase SQL editor; generate `types/database.ts` via `supabase gen types`.
+   - Replace `signIn` in `lib/store/session.ts` with a call to `supabase.auth.signInWithOtp`.
+   - Replace `middleware.ts` cookie check with `supabase.auth.getUser()` from `@supabase/ssr`.
+   - Persist follows to `user_followed_*` tables instead of localStorage.
+4. **Phase 2 — live data:**
+   - `app/api/football/{live-scores,fixtures,standings,team/[teamId],match/[fixtureId],search}/route.ts` — proxy API-Football, never expose key. Cache-Control per route per bible §10.
+   - `lib/api/football.ts` helpers: `getCurrentSeason`, `formatFixture`, `formatStandings`, `formatPlayer`.
+   - `hooks/useLiveScores.ts` with TanStack Query and 30 s polling.
+   - Swap `getDemoMatches()` calls for live data hooks.
+   - Build the MatchDetailSheet (5 tabs) per bible §2.1.
+   - Build StandingsTable for `/leagues/[leagueId]`.
+5. Run lint + typecheck + build before declaring Phase 2 done.
 
 ---
 
@@ -112,7 +165,15 @@ Tick boxes as we go. Sub-items live in PROJECT_Sick-Boy.md §11.
   - [ ] Husky + lint-staged *(deferred — install in Phase 1)*
   - [ ] GitHub Actions CI (lint + typecheck + build) *(deferred — add in Phase 1)*
   - [ ] Supabase project created, schema applied, `types/database.ts` generated *(blocked on user — no project yet)*
-- [~] **Phase 1** — Auth, Onboarding, Shell *(layout shell done; auth + onboarding pending)*
+- [x] **Phase 1** — Auth, Onboarding, Shell *(in demo mode — see "deferred Supabase wiring" in Tech Debt below)*
+  - [x] Demo email-OTP login at `/login` with 3 states (form / sent / ready) and Framer transitions
+  - [x] 3-step onboarding wizard at `/onboarding` (leagues → clubs → players + tournaments) with progress bar, debounced search, confetti on completion
+  - [x] Zustand store (`lib/store/session.ts`) with localStorage persistence + cookie shadow for SSR
+  - [x] `middleware.ts` route protection — redirects unauth users from `/`, `/scores`, etc. to `/login`. Allowlists `/login` and `/onboarding`.
+  - [x] Navbar + MobileNav hide themselves on auth routes
+  - [x] Cmd+K (or `/`) opens SearchModal — debounced 300 ms, keyboard navigable, recent searches in localStorage (max 5)
+  - [x] NotificationBell popover with unread count, mark-all-read, ESC + outside-click to close
+  - [x] PWA manifest + SVG icon registered in metadata
 - [ ] **Phase 2** — Live Data Layer & Core Pages
 - [ ] **Phase 3** — ML Service (FastAPI)
 - [ ] **Phase 4** — Intelligence Hub & ML Pages
@@ -156,7 +217,7 @@ Captured at start of session 1 (2026-04-30):
 - Git initialized: yes — main branch
 - GitHub: **https://github.com/krish2248/futology** (public)
 - Author identity (local config): `Sonik Krish <sonikrish2248@gmail.com>`
-- Commits in session 1: **38** (one per file, per user direction)
+- Commits at end of session 1 part 2: see `git log --oneline | wc -l` (one commit per file/change, Conventional Commits)
 
 ---
 
@@ -177,48 +238,50 @@ Captured at start of session 1 (2026-04-30):
 ```
 Sick-Boy/
 ├── PROJECT_Sick-Boy.md            # the bible (spec)
+├── README.md
 ├── SESSION.md                     # this file
-└── futology/                      # Next.js app
-    ├── .env.example
-    ├── .eslintrc.json
-    ├── .gitignore
-    ├── next-env.d.ts
-    ├── next.config.js
-    ├── package.json
-    ├── postcss.config.js
-    ├── tailwind.config.ts
-    ├── tsconfig.json
+└── futology/
+    ├── middleware.ts              # auth gate
+    ├── next.config.js · postcss.config.js · tailwind.config.ts · tsconfig.json
+    ├── package.json · package-lock.json
+    ├── .env.example · .eslintrc.json · .gitignore · next-env.d.ts
+    ├── public/
+    │   ├── icon.svg · manifest.json · robots.txt
     ├── app/
-    │   ├── globals.css
-    │   ├── layout.tsx             # Inter, dark <html>, Navbar + MobileNav, skip link
-    │   ├── loading.tsx
-    │   ├── not-found.tsx
-    │   ├── page.tsx               # /
-    │   ├── clubs/page.tsx
-    │   ├── intelligence/
-    │   │   ├── page.tsx           # 6-card hub
-    │   │   └── [slug]/page.tsx    # match | players | sentiment | tactics | transfer | fantasy
-    │   ├── leagues/page.tsx
-    │   ├── predictions/page.tsx
-    │   ├── profile/page.tsx
-    │   ├── scores/page.tsx
-    │   └── tournaments/page.tsx
+    │   ├── layout.tsx · globals.css · loading.tsx · not-found.tsx · icon.svg
+    │   ├── page.tsx                       # / — hero + live strip + quick links
+    │   ├── login/page.tsx                 # demo email-OTP
+    │   ├── onboarding/page.tsx            # 3-step wizard with confetti
+    │   ├── scores/{page,ScoresView}.tsx   # filter tabs + grouped MatchCards
+    │   ├── predictions/{page,PredictionsView}.tsx
+    │   ├── profile/{page,ProfileView}.tsx
+    │   ├── intelligence/page.tsx + [slug]/page.tsx
+    │   └── clubs · leagues · tournaments  (page.tsx empty-state shells)
     ├── components/
     │   ├── layout/
-    │   │   ├── Navbar.tsx
-    │   │   └── MobileNav.tsx
+    │   │   ├── Navbar.tsx                 # Cmd+K + bell wired
+    │   │   ├── MobileNav.tsx
+    │   │   └── NotificationBell.tsx       # popover, unread count, mark all read
+    │   ├── cards/MatchCard.tsx            # +LiveStrip
+    │   ├── predictions/
+    │   │   ├── PredictionCard.tsx
+    │   │   └── WinProbabilityBar.tsx
     │   └── shared/
-    │       ├── Card.tsx
-    │       ├── EmptyState.tsx
-    │       ├── LiveBadge.tsx
-    │       ├── PageHeader.tsx
-    │       └── StatTile.tsx
+    │       ├── Card.tsx · EmptyState.tsx · LiveBadge.tsx
+    │       ├── PageHeader.tsx · StatTile.tsx
+    │       └── SearchModal.tsx            # Cmd+K, debounced, keyboard-nav
+    ├── hooks/
+    │   └── useHydratedSession.ts          # useIsClient() helper
     └── lib/
         ├── constants/
-        │   ├── intelligence.ts
-        │   └── navigation.ts
+        │   ├── intelligence.ts · navigation.ts
+        ├── data/
+        │   ├── leagues.ts · clubs.ts · players.ts · tournaments.ts
+        │   ├── demoMatches.ts · demoPredictions.ts
+        ├── store/
+        │   └── session.ts                 # Zustand + localStorage + cookie
         └── utils/
-            └── cn.ts
+            ├── cn.ts · format.ts
 ```
 
 ### Planned (PROJECT_Sick-Boy.md §5)
@@ -228,10 +291,11 @@ See bible §5 for the full target structure. We're building it incrementally per
 
 ## 🐛 Known Issues / Tech Debt
 
-- Inline Tailwind components stand in for shadcn/ui primitives. Decide in Phase 1 whether to install `shadcn` or keep building custom — both are fine; pick once and don't mix.
-- Search and notification icons in the Navbar are visual only — not wired up. Phase 1 connects them to a SearchModal and Supabase Realtime.
-- No Framer Motion yet. The bible expects spring physics on sheets and a slide animation on the auth page; install it when Phase 1 starts.
-- API key cache strategy is documented in the bible but not yet enforced — there are no API routes. Will be enforced when `/api/football/*` routes are built in Phase 2.
+- **Demo Supabase shim.** The login flow currently sets a `futology_session` cookie and stores user state in localStorage via Zustand. When the user provides Supabase keys, swap `lib/store/session.ts#signIn` to call `supabase.auth.signInWithOtp` and replace the cookie with the Supabase SSR session cookie. The middleware.ts contract (cookie present = authenticated) is intentionally swap-compatible.
+- **NotificationBell uses 3 hard-coded notifications.** Replace with a Supabase Realtime subscription on `notifications` table in Phase 5.
+- **PredictionCard / MatchCard / SearchModal read from `lib/data/*` seed data.** Replace those imports with TanStack Query hooks pointed at `/api/football/*` and `/api/ml/predict-match` once Phase 2/3/4 backends exist.
+- **Inline Tailwind components stand in for shadcn/ui primitives.** Working fine; decision deferred — install shadcn for the Sheet/Tabs/Dialog primitives in Phase 2 if a feature needs them, otherwise stay custom.
+- **API key cache strategy** is documented in the bible but not yet enforced — there are no API routes yet. Will land with Phase 2's `/api/football/*` routes.
 
 ---
 
