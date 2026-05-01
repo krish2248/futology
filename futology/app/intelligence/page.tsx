@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card } from "@/components/shared/Card";
 import { StatTile } from "@/components/shared/StatTile";
 import { INTEL_FEATURES } from "@/lib/constants/intelligence";
+import { EXTRA_FEATURES } from "@/lib/constants/extras";
 
 export const metadata: Metadata = { title: "Intelligence" };
 
@@ -57,8 +58,56 @@ export default function IntelligencePage() {
       </div>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">
-          Model performance
+        <div className="mb-3 flex items-end justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Extras</h2>
+            <p className="text-sm text-text-secondary">
+              {EXTRA_FEATURES.length} wishlist features beyond the core six.
+            </p>
+          </div>
+          <Link
+            href="/intelligence/extras"
+            className="inline-flex items-center gap-1 text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+          >
+            View all <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {EXTRA_FEATURES.slice(0, 3).map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <Link
+                key={feature.slug}
+                href={`/intelligence/extras/${feature.slug}`}
+                className="group block"
+              >
+                <Card hover className="flex h-full items-start gap-3">
+                  <div
+                    aria-hidden
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-muted text-accent"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{feature.title}</p>
+                    <p className="line-clamp-2 text-xs text-text-secondary">
+                      {feature.description}
+                    </p>
+                  </div>
+                  <ArrowRight
+                    aria-hidden
+                    className="ml-auto mt-1 h-4 w-4 shrink-0 text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-accent"
+                  />
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 inline-flex items-center gap-1.5 text-lg font-semibold tracking-tight">
+          <Sparkles className="h-4 w-4 text-accent" aria-hidden /> Model performance
         </h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatTile label="Match accuracy" value="—" hint="Trained Phase 3" />
