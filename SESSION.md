@@ -10,9 +10,9 @@
 **Phase 0** ✅ shell complete (Supabase + Husky/CI deferred until backend keys exist)
 **Phase 1** ✅ in demo mode — login + onboarding + Cmd+K + middleware. Real Supabase swaps in when keys arrive.
 **Phase 2** ✅ in demo mode — `/api/football/*` routes + TanStack Query + 30 s polling + StandingsTable + MatchDetailSheet (5 tabs) + per-league pages. Real RapidAPI wires in by replacing the demo branch in each route.
-**Phase 4 (Match Predictor only)** ✅ in demo mode — `/api/ml/predict-match` returns deterministic seeded predictions; `/intelligence/match` is fully functional. The other 5 intelligence sub-pages remain placeholders.
+**Phase 4** ✅ in demo mode — all 6 intelligence sub-pages fully built: Match Predictor, Player Pulse (cluster scatter + comparison radar), Sentiment Storm (timeline + gauges + live feed), TacticBoard (xG shot map + pass network), Transfer Oracle (predicted value + SHAP factors), Fantasy IQ (squad optimizer + formation pitch). FastAPI ML service from bible §3 swaps in route-by-route.
 
-Next session resumes: ask user for keys, then swap demo branches for real adapters one route at a time. Or keep building remaining intelligence sub-pages (Player Pulse, Sentiment, TacticBoard, Transfer Oracle, Fantasy IQ) which can be done in demo mode without external services.
+Next session resumes: ask user for keys (Supabase, API-Football, Reddit, etc.), then swap demo branches for real adapters one route at a time. The whole front-end is fully demoable as-is.
 
 ---
 
@@ -71,16 +71,38 @@ Each `route.ts` has a single `if (isDemoMode)` branch returning seeded data. Pha
 
 Same for `/api/ml/predict-match` — the body branch swaps to a `fetch` to the FastAPI ML service authenticated by `ML_SERVICE_TOKEN`. Until then, `lib/ml/predictor.ts` simulates the same return shape as the bible §9.1 spec (home/draw/away probs, predicted score, confidence, key factors).
 
+**Built (continued, same calendar day):**
+- All 5 remaining intelligence pages (Player Pulse, Sentiment Storm, TacticBoard, Transfer Oracle, Fantasy IQ) — see Phase Tracker above for the full per-feature breakdown.
+- Pure-SVG charts everywhere (no Recharts/Plotly yet) — keeps bundle small. When the real ML service lands, the chart shapes are already exact.
+- Components added: `PlayerClusterChart`, `ClusterFilter`, `PlayerComparisonRadar`, `PlayerPicker`, `SentimentTimeline`, `SentimentGauge`, `PitchSVG` (+ `PitchMarker`), `FantasyPitch`.
+- Demo data added: `playerClusters.ts` (6 cluster profiles per bible §9.2), `demoPlayerStats.ts` (per-90 stats with seeded PCA-derived axes + `nearestPlayers` + `toRadar`), `demoSentiment.ts` (90-min sentiment walk + reaction sampler), `demoTactics.ts` (xG shots + pass network), `demoFantasy.ts` (FANTASY_POOL + greedy `optimizeFantasy`).
+- ML helpers: `lib/ml/transfer.ts` produces a SHAP-style factor breakdown around a base value derived from position, goals, xG, assists, passing, pressing, minutes.
+
+**Verified working (final):**
+- `npx tsc --noEmit` → clean
+- `npx next build` → 26 routes (6 dynamic API + 6 intelligence sub-pages + 20 SSG league pages + the standard set), ~145 KB FLJS for the heaviest intel page
+- Smoke test on dev server (3003): every intel sub-page returns 200 with expected size:
+  - `/intelligence/match` — 21 KB
+  - `/intelligence/players` — 33 KB
+  - `/intelligence/sentiment` — 35 KB
+  - `/intelligence/tactics` — 32 KB
+  - `/intelligence/transfer` — 20 KB
+  - `/intelligence/fantasy` — 22 KB
+
 **Next session starts here:**
-1. Read `SESSION.md`. Confirm Phase 2 demo data layer is in place.
-2. Decide: keep building intelligence pages (no keys needed) OR provision keys and start cutover.
-3. **If continuing in demo mode:** build the next intelligence pages —
-   - `/intelligence/players` — Player Pulse cluster scatter (custom SVG, 6 named clusters per bible §9.2)
-   - `/intelligence/sentiment` — Sentiment Storm timeline (Recharts AreaChart) + gauges + excitement meter
-   - `/intelligence/tactics` — TacticBoard xG shot map on pitch SVG
-   - `/intelligence/transfer` — Transfer Oracle (predicted value + SHAP-style factor list + comparable players)
-   - `/intelligence/fantasy` — Fantasy IQ optimizer (greedy demo solver, formation pitch view)
-4. **If cutting over:** add `lib/supabase/{client,server,middleware}.ts`, replace the demo branches one route at a time. Apply the schema from bible §6 to Supabase.
+1. Read `SESSION.md`. The whole front-end is demoable end-to-end.
+2. Decide: cut over to real services, OR build Phase 5 (predictions settlement, prediction leagues, community polls, email notifications).
+3. **If cutting over:**
+   - Install `@supabase/supabase-js`, `@supabase/ssr`. Add `lib/supabase/{client,server,middleware}.ts`.
+   - Apply schema from bible §6 in the Supabase SQL editor. Generate `types/database.ts`.
+   - Replace `lib/store/session.ts#signIn` with `supabase.auth.signInWithOtp`. Update `middleware.ts` to call `supabase.auth.getUser()`.
+   - One route at a time: replace each `if (isDemoMode)` branch with a `fetch` to RapidAPI / FastAPI ML service. The signatures and envelopes are already correct.
+4. **If building Phase 5:**
+   - Predictions form (make a prediction, store in `predictions` table).
+   - Cron settlement (Edge Function) on finished fixtures.
+   - Prediction leagues (create / join / leaderboard).
+   - Community polls + Supabase Realtime subscription.
+   - Resend email digest.
 
 ---
 
@@ -253,7 +275,16 @@ Tick boxes as we go. Sub-items live in PROJECT_Sick-Boy.md §11.
   - [ ] Club detail page (6 tabs)
   - [ ] Player detail page
   - [ ] News feed
-- [~] **Phase 4 (sub-feature only)** — Match Predictor at `/intelligence/match` is fully wired against `/api/ml/predict-match`. The other 5 intelligence sub-pages are still placeholders.
+- [x] **Phase 4** — Intelligence Hub & ML Pages *(all 6 features built in demo mode)*
+  - [x] **Match Predictor** at `/intelligence/match` — two-team picker, animated probability bar, predicted score, confidence pill, plain-English key factors. POSTs to `/api/ml/predict-match`.
+  - [x] **Player Pulse** at `/intelligence/players` — pure-SVG cluster scatter with hover/click, 6 named clusters per bible §9.2, side-by-side comparison radar, similar-players panel, full cluster profile descriptions.
+  - [x] **Sentiment Storm** at `/intelligence/sentiment` — pure-SVG sentiment timeline with goal annotations, two team gauges with mood label, excitement meter, live-feed cards with slide-in animation (synthetic ticker every 8 s on live matches).
+  - [x] **TacticBoard** at `/intelligence/tactics` — accurate-proportion football pitch SVG (105 m × 68 m), xG shot dots (size = xG, color = goal/saved/off/blocked), Shots ↔ Passes view toggle, pass-network nodes/edges, Sidebar with xG, PPDA, possession, field tilt, pass accuracy.
+  - [x] **Transfer Oracle** at `/intelligence/transfer` — player picker, predicted EUR value with 80% confidence band, top SHAP-style factors (positive accent, negative live-red bars), 3 nearest-neighbour comparable players.
+  - [x] **Fantasy IQ** at `/intelligence/fantasy` — budget slider (£80–£105M), 5 formation choices, safe/balanced/bold risk, greedy demo solver respecting bible constraints (15 players, 2 GK / 5 DEF / 5 MID / 3 FWD, max 3 per club, budget cap), formation pitch view with gold captain armband, bench list, differential picks, copy-to-clipboard squad export.
+- [ ] **Phase 5** — Predictions, Profile, Notifications *(predictions & profile shells done in demo mode; settlement + leagues + community polls + email notifications outstanding)*
+- [ ] **Phase 6** — Bonus / Wishlist Features
+- [ ] **Phase 7** — Polish, Performance, Deploy
 - [ ] **Phase 2** — Live Data Layer & Core Pages
 - [ ] **Phase 3** — ML Service (FastAPI)
 - [ ] **Phase 4** — Intelligence Hub & ML Pages
