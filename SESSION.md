@@ -8,16 +8,74 @@
 ## 🎯 Current Phase
 
 **Phase 0** ✅ shell complete (Supabase + Husky/CI deferred until backend keys exist)
-**Phase 1** ✅ in demo mode — login + onboarding + Cmd+K + middleware. Real Supabase swaps in when keys arrive.
-**Phase 2** ✅ in demo mode — `/api/football/*` routes + TanStack Query + 30 s polling + StandingsTable + MatchDetailSheet (now 6 tabs) + per-league pages. Real RapidAPI wires in by replacing the demo branch in each route.
-**Phase 4** ✅ in demo mode — all 6 intelligence sub-pages fully built (Match Predictor, Player Pulse, Sentiment Storm, TacticBoard, Transfer Oracle, Fantasy IQ).
-**Phase 5** ✅ in demo mode — full prediction game loop: prediction form with score picker, auto-settlement on finished fixtures (3/1/0 points), 4-tab predictions hub (AI / Mine / Leagues / Community), league create/join/leaderboard, public leagues, community polls with vote-once, trending picks, accuracy leaders, real notifications wired through the store.
+**Phase 1** ✅ in demo mode — login + onboarding + Cmd+K + middleware
+**Phase 2** ✅ in demo mode — `/api/football/*` routes + TanStack Query + 30 s polling + StandingsTable + MatchDetailSheet (6 tabs) + per-league pages
+**Phase 4** ✅ in demo mode — all 6 intelligence sub-pages fully built
+**Phase 5** ✅ in demo mode — full prediction game loop, 4-tab predictions hub, leagues, polls, accuracy leaders, real notifications
+**Phase 6** ✅ in demo mode — 4 marquee wishlist features: Tournament Simulator (Monte Carlo), Match Momentum (rolling 5-min xG), Referee Bias (big-game effect), Weather Impact
+**Phase 7** ⏳ partial — top-level ErrorBoundary, Settings page with notification toggles + email toggle + reset session, dark-mode-locked indicator. Service worker + Lighthouse audit + Playwright E2E + deploy script still outstanding.
 
-Next session resumes: provision keys, then swap demo branches for real adapters one route at a time. Or build Phase 6 (wishlist) and Phase 7 (PWA polish, demo seed bundles, deploy). The whole front-end is demoable as-is.
+Next session resumes: provision Supabase + RapidAPI keys to begin cutover, OR finish Phase 7 (next-pwa service worker, Playwright smoke flow, deploy to Vercel + Railway). 3 wishlist features still in the queue: Press Intensity, Injury Intelligence, Odds Movement Alerts.
 
 ---
 
 ## 📅 Session History
+
+### Session 4 — 2026-05-02
+
+**Goal:** Push into Phase 6 (wishlist) and start Phase 7 polish. Build the most-impactful four wishlist features (Tournament Simulator, Match Momentum, Referee Bias, Weather Impact), plus the polish slice that's safe to ship without external services (top-level error boundary, settings page).
+
+**Built:**
+
+*Phase 6 — wishlist features (`/intelligence/extras/*`)*
+- `lib/constants/extras.ts` — central definition of wishlist features (4 ready, 3 still in the queue).
+- `app/intelligence/extras/page.tsx` — Extras hub with feature cards. Linked from the main Intelligence Hub via a new "Extras" preview section.
+- **Tournament Simulator** at `/intelligence/extras/tournament-simulator`:
+  - `lib/ml/tournamentSim.ts` — ELO-based win probability with a 30-point home tilt, runs all 4 knockout rounds, aggregates to {QF %, SF %, Final %, Win %}.
+  - 16-team UCL R16 seed bracket. Run options: 1k / 5k / 10k / 25k. Re-run with new RNG seed via the toolbar button.
+  - Animated probability table with per-cell mini-bars. Top-4 favorite cards with crown for #1.
+- **Match Momentum** at `/intelligence/extras/momentum`:
+  - `lib/data/demoMomentum.ts` — per-minute xG increments rolled into a 5-minute window; counts swing crossings.
+  - Pure-SVG dual-area chart: home above center, away below center. Goal markers vertical lines.
+  - Stat tiles: peak home/away xG (with minute), total swings, window length.
+- **Referee Bias** at `/intelligence/extras/referee-bias`:
+  - `lib/data/demoReferees.ts` — 14 referees across 6 leagues. Per-ref cards/match plus big-game-only cards/match. Sortable.
+  - Toggle for "big games only", which recomputes the table. Big-game delta column shows arrow + percentage. Home tilt index (50 = neutral, ≥54 H, ≤46 A).
+- **Weather Impact** at `/intelligence/extras/weather`:
+  - `lib/data/demoWeather.ts` — 5 weather buckets (clear / rain / heat / wind / cold) × 5 leagues. Each split has matches, home/draw/away rates, goals/match.
+  - League filter chips (All / EPL / La Liga / Bundesliga / Serie A / Ligue 1). Per-bucket card with stacked horizontal bar and Δ-vs-baseline pp delta.
+
+*Phase 7 — polish slice*
+- `components/shared/ErrorBoundary.tsx` — class-based React error boundary with retry. Wired around `<main>` in the root layout.
+- `lib/store/preferences.ts` — separate Zustand persist slice for notification toggles + email toggle. Bible §6 mirrors `profiles.notifications_enabled` etc.
+- `components/shared/Toggle.tsx` — accessible switch with `role="switch"` and `aria-checked`.
+- `app/profile/settings/page.tsx` + `SettingsView.tsx` — settings sections for notifications (5 toggles), email, theme (locked-dark indicator), danger zone with reset-session confirmation.
+- `ProfileView.tsx` — Settings card is now a real link to `/profile/settings`.
+
+**Verified working:**
+- `npx tsc --noEmit` → clean
+- `npx next build` → 31 routes total (added: extras hub + 4 features + settings)
+- Smoke test on dev server (3005):
+  - `/intelligence/extras` → 200 / 36 KB
+  - `/intelligence/extras/tournament-simulator` → 200 / 56 KB (largest demo page; 10k Monte Carlo runs at render)
+  - `/intelligence/extras/momentum` → 200 / 30 KB
+  - `/intelligence/extras/referee-bias` → 200 / 35 KB
+  - `/intelligence/extras/weather` → 200 / 28 KB
+  - `/profile/settings` → 200 / 25 KB
+- Bundle still well under budget: extras pages are 28–56 KB and stay under 145 KB FLJS.
+
+**Architectural note: Tournament Simulator runs client-side.**
+
+Each render runs N Monte Carlo iterations on the main thread. At 10,000 runs × 15 matches/run = 150k ELO probability evaluations, this is fast enough to feel instant (~80–120 ms on modern hardware), but if we ever crank up to 100k+ runs we should move it to a Web Worker. The function in `lib/ml/tournamentSim.ts` is pure and side-effect-free, so a worker port is mechanical: post `{ runs, seed, bracket }`, receive `SimulationOutcome`. Logged here so the Phase 7 perf pass can spot it.
+
+**Next session starts here:**
+1. Read `SESSION.md`. Phase 6 has 3 wishlist features remaining (Press Intensity, Injury Intelligence, Odds Movement Alerts) — all doable without external keys.
+2. Decide between three reasonable next moves:
+   - **(a) Finish Phase 7** — install `next-pwa` for the service worker, write Playwright smoke tests (login → predict → settle → leaderboard), bundle analysis pass, Lighthouse aim ≥90, write `pre_deploy_check.ts`, deploy ML stub to Railway and frontend to Vercel.
+   - **(b) Begin Supabase cutover** — install `@supabase/ssr`, apply schema, swap `signIn` and `middleware.ts` first, then start migrating `predictions[]`/`predictionLeagues[]` to real tables. Each demo route's `if (isDemoMode)` branch swaps independently.
+   - **(c) Finish Phase 6** — build Press Intensity Heatmap (PPDA-driven, lifts data from existing TacticBoard demo), Injury Intelligence (impact model with seeded injuries), Odds Movement Alert (flag suspicious odds shifts).
+
+---
 
 ### Session 3 — 2026-05-01 (continued, second batch)
 
@@ -336,12 +394,24 @@ Tick boxes as we go. Sub-items live in PROJECT_Sick-Boy.md §11.
   - [x] **Community polls**: 3 active polls with vote-once, per-option progress bar fill animated by vote count, anonymous accuracy-leaders table, trending-predictions cards.
   - [x] **NotificationBell** now reads from the store's `notifications[]` (with seed fallback when empty); mark-all-read writes through to the store; unread badge shows real count.
   - [ ] Resend email digest *(Phase 5 cutover with API key)*
-- [ ] **Phase 6** — Bonus / Wishlist Features
-- [ ] **Phase 7** — Polish, Performance, Deploy
-- [ ] **Phase 2** — Live Data Layer & Core Pages
-- [ ] **Phase 3** — ML Service (FastAPI)
-- [ ] **Phase 4** — Intelligence Hub & ML Pages
-- [ ] **Phase 5** — Predictions, Profile, Notifications
+- [~] **Phase 6** — Bonus / Wishlist Features *(4 of 7 built; Press Intensity, Injury Intelligence, Odds Movement Alerts still in queue)*
+  - [x] **Tournament Simulator** at `/intelligence/extras/tournament-simulator` — ELO-based Monte Carlo (1k/5k/10k/25k runs), 16-team UCL R16 bracket, advancement probabilities per round, top-4 favorites cards.
+  - [x] **Match Momentum** at `/intelligence/extras/momentum` — rolling 5-min xG window, dual-area SVG chart, swing-counter and peak-minute stats.
+  - [x] **Referee Bias** at `/intelligence/extras/referee-bias` — 14 refs across 6 leagues, big-game-only toggle, sortable, big-game delta arrows, home-tilt index.
+  - [x] **Weather Impact** at `/intelligence/extras/weather` — 5 buckets × 5 leagues, league filter chips, stacked outcome bars, Δ-vs-baseline pp delta, goals/match.
+  - [ ] Press Intensity Heatmap (lift PPDA from existing TacticBoard demo)
+  - [ ] Injury Intelligence
+  - [ ] Odds Movement Alert
+- [~] **Phase 7** — Polish, Performance, Deploy *(error boundary + settings landed; service worker + Lighthouse + E2E + deploy outstanding)*
+  - [x] Top-level `ErrorBoundary` wraps `<main>` in root layout
+  - [x] `/profile/settings` page — 5 notification toggles, email toggle, dark-locked indicator, reset-session danger zone
+  - [x] `lib/store/preferences.ts` — Zustand persist for notification preferences
+  - [ ] PWA service worker via `next-pwa`
+  - [ ] Bundle analysis pass (`@next/bundle-analyzer`)
+  - [ ] Playwright smoke E2E (login → predict → settle → leaderboard)
+  - [ ] Lighthouse audit ≥ 90 across the four scores
+  - [ ] `scripts/check_env.ts` pre-deploy script
+  - [ ] Vercel + Railway deploy
 - [ ] **Phase 6** — Bonus / Wishlist Features
 - [ ] **Phase 7** — Polish, Performance, Deploy
 
