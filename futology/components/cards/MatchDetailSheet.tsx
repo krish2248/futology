@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin } from "lucide-react";
+import { X, MapPin, Target } from "lucide-react";
 import { useMatchDetail } from "@/hooks/useLiveScores";
 import { LiveBadge } from "@/components/shared/LiveBadge";
 import { ApiError } from "@/components/shared/ApiError";
+import { PredictionForm } from "@/components/predictions/PredictionForm";
 import {
   formatKickoff,
   formatRelativeMinute,
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils/cn";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "predict", label: "Predict" },
   { id: "stats", label: "Stats" },
   { id: "lineups", label: "Lineups" },
   { id: "events", label: "Events" },
@@ -120,6 +122,7 @@ export function MatchDetailSheet({ fixtureId, onClose }: Props) {
 
                   <div className="px-4 py-4">
                     {tab === "overview" ? <OverviewTab detail={data} /> : null}
+                    {tab === "predict" ? <PredictTab detail={data} /> : null}
                     {tab === "stats" ? <StatsTab stats={data.stats} /> : null}
                     {tab === "lineups" ? (
                       <LineupsTab home={data.homeLineup} away={data.awayLineup} />
@@ -184,6 +187,36 @@ function Header({ detail }: { detail: MatchDetail }) {
           {m.awayTeam}
         </p>
       </div>
+    </div>
+  );
+}
+
+function PredictTab({ detail }: { detail: MatchDetail }) {
+  const m = detail.match;
+  const isLocked = m.status !== "scheduled";
+  return (
+    <div className="space-y-4">
+      <div className="surface flex items-start gap-3 p-3">
+        <div
+          aria-hidden
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-muted text-accent"
+        >
+          <Target className="h-4 w-4" />
+        </div>
+        <div className="text-sm">
+          <p className="font-medium">Make a prediction</p>
+          <p className="text-text-secondary">
+            3 points for an exact score, 1 for picking the right winner.
+          </p>
+        </div>
+      </div>
+      <PredictionForm
+        fixtureId={m.id}
+        homeTeam={m.homeTeam}
+        awayTeam={m.awayTeam}
+        matchDate={m.kickoff}
+        isLocked={isLocked}
+      />
     </div>
   );
 }
