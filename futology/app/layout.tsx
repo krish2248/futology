@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { AuthGate } from "@/components/layout/AuthGate";
 import { Providers } from "@/components/providers/Providers";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import "./globals.css";
@@ -53,11 +54,13 @@ export default function RootLayout({
           Skip to content
         </a>
         <Providers>
-          <Navbar />
-          <main id="main" className="container-page pb-24 pt-4 md:pb-12 md:pt-8">
-            <ErrorBoundary>{children}</ErrorBoundary>
-          </main>
-          <MobileNav />
+          <AuthGate>
+            <Navbar />
+            <main id="main" className="container-page pb-24 pt-4 md:pb-12 md:pt-8">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
+            <MobileNav />
+          </AuthGate>
         </Providers>
       </body>
     </html>
