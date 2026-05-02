@@ -110,10 +110,15 @@ export const api = {
     }>({ league, bands, rows });
   },
 
-  match: (fixtureId: number) => {
-    const match = getDemoMatches().find((m) => m.id === fixtureId);
+  /**
+   * Get detailed match information by fixture ID.
+   * @param params - Object containing fixtureId
+   * @returns Promise resolving to MatchDetail or rejects if not found
+   */
+  match: (params: MatchParams) => {
+    const match = getDemoMatches().find((m) => m.id === params.fixtureId);
     if (!match) {
-      return Promise.reject(new Error(`Match ${fixtureId} not found`));
+      return Promise.reject(new Error(`Match ${params.fixtureId} not found`));
     }
     return resolved<MatchDetail>(getDemoMatchDetail(match));
   },
