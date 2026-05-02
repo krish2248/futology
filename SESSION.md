@@ -5,11 +5,11 @@
 
 ---
 
-## 🎯 Project status — PAUSED for now (user pivoting to a different project)
+## 🎯 Project status — ACTIVE (legitimate contribution building)
 
 **LIVE:** **https://krish2248.github.io/futology/** (GitHub Pages · auto-deploys from `main` via `.github/workflows/deploy.yml`)
 
-The whole front-end is demoable end-to-end. A future session can resume from here without ramp-up.
+The whole front-end is demoable end-to-end. Building legitimate contributions through real code improvements.
 
 **Phase 0** ✅ shell complete
 **Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.)
@@ -17,7 +17,7 @@ The whole front-end is demoable end-to-end. A future session can resume from her
 **Phase 4** ✅ all 6 intelligence sub-pages
 **Phase 5** ✅ full prediction game loop, leagues, polls, leaders, notifications
 **Phase 6** ✅ all 7 wishlist features (Tournament Simulator, Match Momentum, Press Intensity, Referee Bias, Weather Impact, Injury Intelligence, Odds Movement Alerts)
-**Phase 7** ⏳ partial — ErrorBoundary, Settings, dark-lock indicator, **GitHub Pages deploy with auto-CI workflow** ✅. Outstanding: `next-pwa` service worker, Playwright smoke E2E (login → predict → settle → leaderboard), Lighthouse audit ≥ 90, Vercel + Supabase cutover.
+**Phase 7** 🔄 IN PROGRESS — ErrorBoundary ✅, Settings ✅, dark-lock indicator ✅, **GitHub Pages deploy with auto-CI workflow** ✅, **next-pwa service worker** ✅ (configured, needs testing), **Playwright E2E smoke tests** ✅ (setup complete). Outstanding: Lighthouse audit ≥ 90, Vercel + Supabase cutover.
 
 When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The "Next session starts here" block below has the playbook.
 
