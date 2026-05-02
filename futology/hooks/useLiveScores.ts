@@ -32,7 +32,7 @@ export function useFixtures(params?: {
 export function useMatchDetail(fixtureId: number | null) {
   return useQuery({
     queryKey: ["football", "match", fixtureId],
-    queryFn: () => api.match(fixtureId as number),
+    queryFn: () => api.match({ fixtureId: fixtureId as number }),
     enabled: fixtureId !== null,
   });
 }
