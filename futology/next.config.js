@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+const withPWA = require("next-pwa")({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+});
 
 const isExport = process.env.NEXT_OUTPUT === "export";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -22,4 +28,4 @@ const nextConfig = {
     : {}),
 };
 
-module.exports = nextConfig;
+module.exports = withPWA(nextConfig);

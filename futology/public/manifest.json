@@ -1,13 +1,13 @@
 {
-  "name": "FUTOLOGY",
-  "short_name": "FUTOLOGY",
+  "name": "Futology",
+  "short_name": "Futology",
   "description": "Football intelligence platform — every goal, every emotion, every insight.",
-  "start_url": ".",
-  "scope": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0A0A0A",
   "theme_color": "#0A0A0A",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "categories": ["sports", "productivity"],
   "icons": [
     {

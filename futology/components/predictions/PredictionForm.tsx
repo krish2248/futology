@@ -49,7 +49,7 @@ export function PredictionForm({
       setHome(existing.predictedHomeScore);
       setAway(existing.predictedAwayScore);
     }
-  }, [existing?.id, existing?.predictedHomeScore, existing?.predictedAwayScore]);
+  }, [existing]);
 
   function applyML() {
     if (!ml) return;

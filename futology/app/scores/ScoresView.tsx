@@ -32,7 +32,7 @@ export function ScoresView() {
       status: filter,
     });
 
-  const matches = data ?? [];
+  const matches = useMemo(() => data ?? [], [data]);
   const grouped = useMemo(() => matchesByLeague(matches), [matches]);
   const liveCount = matches.filter((m) => m.status === "live").length;
 
