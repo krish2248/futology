@@ -18,6 +18,7 @@ import {
 import { useSession } from "@/lib/store/session";
 import { useIsClient } from "@/hooks/useHydratedSession";
 import { cn } from "@/lib/utils/cn";
+import { NewsSkeleton } from "@/components/shared/NewsSkeleton";
 
 const CATEGORIES: NewsFilter[] = [
   "all",
@@ -60,6 +61,18 @@ export function NewsView() {
     }
     return rankPersonalized(out, followed);
   }, [category, scope, followed]);
+
+  if (!ready) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="News"
+          description="Loading..."
+        />
+        <NewsSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
