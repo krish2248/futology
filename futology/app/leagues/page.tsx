@@ -4,11 +4,13 @@ import { ArrowRight } from "lucide-react";
 import { LEAGUES } from "@/lib/data/leagues";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card } from "@/components/shared/Card";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 export const metadata: Metadata = { title: "Leagues" };
 
 export default function LeaguesPage() {
   return (
+    <ErrorBoundary>
     <div className="space-y-6">
       <PageHeader
         title="Leagues"
@@ -37,5 +39,6 @@ export default function LeaguesPage() {
         ))}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
