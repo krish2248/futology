@@ -53,11 +53,22 @@ export interface SearchParams {
 // Static-export-friendly: every method is a synchronous lookup wrapped in a
 // resolved promise so the call sites still feel async. When we cut over to
 // real services in the Supabase phase, swap each method for a fetch.
+
+/**
+ * Wrap value in resolved promise for consistent async API.
+ * @param value - Value to wrap in Promise
+ * @returns Promise resolving to the value
+ */
 function resolved<T>(value: T): Promise<T> {
   return Promise.resolve(value);
 }
 
 export const api = {
+  /**
+   * Get live scores filtered by league and/or status.
+   * @param params - Optional filter parameters
+   * @returns Promise resolving to array of DemoMatch
+   */
   liveScores: (params?: LiveScoresParams) => {
     const all = getDemoMatches();
     const status = params?.status ?? "live";
@@ -68,6 +79,11 @@ export const api = {
     return resolved<DemoMatch[]>(filtered);
   },
 
+  /**
+   * Get fixtures filtered by league, team, and/or status.
+   * @param params - Optional filter parameters
+   * @returns Promise resolving to array of DemoMatch
+   */
   fixtures: (params?: FixturesParams) => {
     const all = getDemoMatches();
     const status = params?.status ?? "all";
