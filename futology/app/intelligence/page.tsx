@@ -6,12 +6,14 @@ import { Card } from "@/components/shared/Card";
 import { StatTile } from "@/components/shared/StatTile";
 import { INTEL_FEATURES } from "@/lib/constants/intelligence";
 import { EXTRA_FEATURES } from "@/lib/constants/extras";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 export const metadata: Metadata = { title: "Intelligence" };
 
 export default function IntelligencePage() {
   return (
-    <div className="space-y-8">
+    <ErrorBoundary>
+      <div className="space-y-8">
       <PageHeader
         title="Intelligence Hub"
         description="Six ML-powered lenses on the game. Pick one to dive in."
@@ -117,5 +119,6 @@ export default function IntelligencePage() {
         </div>
       </section>
     </div>
+    </ErrorBoundary>
   );
 }
