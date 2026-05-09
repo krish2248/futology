@@ -34,6 +34,14 @@ const BAND_LABELS: Array<{ key: keyof StandingsBands; label: string; color: stri
   { key: "relegation", label: "Relegation", color: "bg-live" },
 ];
 
+/**
+ * League standings table with European-spot / relegation colour bands.
+ *
+ * - Form pills: green W, grey D, red L for the last 5 results.
+ * - Position arrows: green up / red down based on movement.
+ * - Responsive — narrow columns hide on small screens to stay readable.
+ * - Footer legend names each band so the colour code is self-documenting.
+ */
 export function StandingsTable({ rows, bands }: Props) {
   const total = rows.length;
   return (
