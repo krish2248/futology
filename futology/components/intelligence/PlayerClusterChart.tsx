@@ -16,6 +16,15 @@ type Props = {
   filterCluster?: ClusterId | null;
 };
 
+/**
+ * Pure-SVG scatter plot showing players positioned by creative output
+ * (x-axis) and defensive activity (y-axis), coloured by their KMeans
+ * cluster (one of 6 styles per bible §9.2).
+ *
+ * `filterCluster` dims out non-matching dots so the user can focus on a
+ * single playing style; `highlightId` ringed the active comparison
+ * subject; `onSelect` fires when a dot is clicked.
+ */
 export function PlayerClusterChart({
   onSelect,
   highlightId,
