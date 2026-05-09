@@ -6,6 +6,12 @@ export type PlayerSeed = {
   nationality: string;
 };
 
+/**
+ * 24 star players seeded for onboarding and the Player Pulse / Transfer
+ * Oracle pages. IDs match API-Football player IDs so the cutover is a
+ * one-to-one swap. Positions follow the standard GK/DEF/MID/FWD bucketing
+ * used by the fantasy optimiser and player comparison radar.
+ */
 export const PLAYERS: readonly PlayerSeed[] = [
   { id: 521, name: "Lionel Messi", team: "Inter Miami", position: "FWD", nationality: "Argentina" },
   { id: 154, name: "Cristiano Ronaldo", team: "Al-Nassr", position: "FWD", nationality: "Portugal" },
