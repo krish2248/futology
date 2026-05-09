@@ -67,6 +67,14 @@ function inRange([lo, hi]: [number, number], rnd: () => number): number {
   return lo + rnd() * (hi - lo);
 }
 
+/**
+ * Per-90 stat lines for every seeded player. Values are derived
+ * deterministically from each player's ID so the cluster scatter and
+ * radar charts stay stable across renders.
+ *
+ * Includes seeded PCA-derived `clusterX` / `clusterY` axes so the
+ * scatter plot positions don't need to recompute on every mount.
+ */
 export const PLAYER_STATS: readonly PlayerStatLine[] = PLAYERS.map((p) => {
   const rnd = s(p.id);
   const cluster = inferCluster(p, rnd);
@@ -115,10 +123,16 @@ export const PLAYER_STATS: readonly PlayerStatLine[] = PLAYERS.map((p) => {
   };
 });
 
+/** Looks up a stat line by player ID. */
 export function playerStatsById(id: number): PlayerStatLine | undefined {
   return PLAYER_STATS.find((p) => p.playerId === id);
 }
 
+/**
+ * Returns the `k` players closest to `target` in cluster space.
+ * Used to surface "comparable players" on the Transfer Oracle and
+ * "similar players" on Player Pulse. Excludes `target` itself.
+ */
 export function nearestPlayers(target: PlayerStatLine, k = 3): PlayerStatLine[] {
   const ranked = PLAYER_STATS.filter((p) => p.playerId !== target.playerId)
     .map((p) => ({
@@ -143,6 +157,7 @@ export type RadarAxes = {
   passing: number;
 };
 
+/** Converts a stat line to the 6-axis radar shape used by the comparison chart. */
 export function toRadar(p: PlayerStatLine): RadarAxes {
   return {
     goals: Math.min(100, p.goals * 100),
