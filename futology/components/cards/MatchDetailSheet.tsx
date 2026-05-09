@@ -36,6 +36,18 @@ type Props = {
   onClose: () => void;
 };
 
+/**
+ * Slide-up sheet (mobile) / side-sheet (desktop) showing the full detail
+ * for a single fixture. Six tabs:
+ *   - Overview — venue, referee, attendance, goalscorers
+ *   - Predict  — pre-fills the user's prediction; locked once kickoff passes
+ *   - Stats    — bidirectional bars (possession, shots, xG, corners, fouls, cards)
+ *   - Lineups  — accurate-proportion pitch SVG with 22 dots in a 4-3-3
+ *   - Events   — chronological timeline aligned by side
+ *   - H2H      — last 5 meetings with win-tally pills
+ *
+ * Closes on Esc, on outside click, and on the explicit close button.
+ */
 export function MatchDetailSheet({ fixtureId, onClose }: Props) {
   const [tab, setTab] = useState<TabId>("overview");
   const open = fixtureId !== null;
