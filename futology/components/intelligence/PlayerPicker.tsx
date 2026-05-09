@@ -13,6 +13,14 @@ type Props = {
   exclude?: number;
 };
 
+/**
+ * Searchable player dropdown used by Player Pulse and Transfer Oracle.
+ *
+ * Each result row shows the player's position chip and (when relevant)
+ * their cluster colour, so the user can compare playing-style before
+ * committing. `exclude` keeps the already-selected player out of the
+ * comparison candidate list.
+ */
 export function PlayerPicker({ label, selected, onSelect, exclude }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
