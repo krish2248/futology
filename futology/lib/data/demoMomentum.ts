@@ -26,6 +26,11 @@ function seeded(seed: number) {
   };
 }
 
+/**
+ * Builds the per-minute xG momentum series for the Match Momentum page.
+ * Returns home/away xG increments rolled into a 5-minute window plus a
+ * count of momentum swings (sign changes of the home-away delta).
+ */
 export function getDemoMomentum(match: DemoMatch): MomentumSnapshot {
   const finalMinute = match.status === "scheduled" ? 0 : match.minute ?? 90;
   if (finalMinute === 0) {
