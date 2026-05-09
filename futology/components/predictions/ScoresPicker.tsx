@@ -12,6 +12,13 @@ type Props = {
   disabled?: boolean;
 };
 
+/**
+ * Two-sided score-input picker used by the prediction form.
+ *
+ * Buttons are 44px tap targets (per design principle #2 — mobile-first)
+ * and the score is clamped to 0–9 to keep the predicted score believable
+ * without an explicit validation pass.
+ */
 export function ScoresPicker({
   homeTeam,
   awayTeam,
