@@ -25,6 +25,53 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 8 — 2026-05-10 (data-layer JSDoc, repo hygiene, expanded E2E)
+
+**Goal:** Continue Session 7 — finish JSDoc coverage on the data layer, add open-source repo hygiene files (CHANGELOG / CODE_OF_CONDUCT / SECURITY / issue + PR templates), and expand the Playwright suite to cover browse pages, wishlist features, and profile.
+
+**Built (20+ atomic commits):**
+
+*Data-layer JSDoc*
+- `LEAGUES`, `findLeague` in `leagues.ts` — note that IDs match API-Football for cutover ergonomics.
+- `CLUBS`, `clubsByLeague`, `findClub`, `CLUB_QUICK_PICKS` in `clubs.ts`.
+- `PLAYERS` in `players.ts`.
+- `TOURNAMENTS`, `findTournament` in `tournaments.ts`.
+- `getDemoMatches`, `liveMatches`, `matchesByStatus`, `matchesByLeague` in `demoMatches.ts`.
+- `getDemoPredictions` in `demoPredictions.ts`.
+- `NEWS_ITEMS`, `filterByCategory`, `isPersonalized`, `rankPersonalized` in `demoNews.ts`.
+- `BANDS_BY_LEAGUE`, `getDemoStandings`, `getBandsForLeague` in `demoStandings.ts`.
+- `PUBLIC_LEAGUES_SEED` in `demoLeagues.ts`.
+- `COMMUNITY_POLLS`, `TRENDING_PICKS`, `ACCURACY_LEADERS` in `demoCommunity.ts`.
+- Expanded `api.standings` and `api.search` JSDoc in `lib/api/client.ts`.
+
+*Repo hygiene*
+- `CHANGELOG.md` — Keep-a-Changelog format with v0.1.0 → v0.6.0 history and Unreleased section.
+- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1.
+- `SECURITY.md` — disclosure policy with a 72-hour ack target and demo-mode caveat.
+- `.github/ISSUE_TEMPLATE/bug_report.md` and `feature_request.md`.
+- `.github/pull_request_template.md` with summary / phase / test-plan checklist.
+
+*Playwright E2E expansion*
+- `browse.spec.ts` — clubs, leagues, tournaments index pages and detail-link presence.
+- `extras.spec.ts` — every Phase 6 wishlist feature (8 routes).
+- `profile.spec.ts` — profile, settings, notification toggles, settings link.
+
+**Phase 7 Progress (continued):**
+- ✅ Full JSDoc coverage across `lib/data/*` modules.
+- ✅ Repo now has standard OSS hygiene files.
+- ✅ Playwright suite now spans 9 spec files covering homepage, scores, predictions, intelligence, extras, browse, profile, auth, navigation.
+- ⏳ Lighthouse audit ≥ 90 still outstanding.
+- ⏳ Vercel + Supabase cutover still outstanding.
+
+**NEXT SESSION STARTS HERE:**
+1. Run the full Playwright suite locally and stabilise any flakes.
+2. Run a Lighthouse audit on the live GH Pages URL — target ≥ 90 across all four scores. (Issue #2)
+3. Decide on the Supabase + Vercel cutover (real-services migration) vs. Phase 3 (FastAPI ML service).
+4. Test the next-pwa service worker on a deployed build.
+5. Cut a `v0.7.0` release tag once next batch of Phase 7 work lands.
+
+---
+
 ### Session 7 — 2026-05-09 (skeletons + loading states + JSDoc sweep)
 
 **Goal:** Continue Session 6 work — finish the skeleton/loading-state coverage, document hooks/stores/components/utilities, and expand the Playwright suite.
