@@ -7,6 +7,13 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Standardised error surface for failed API queries.
+ *
+ * Pass `onRetry` to render a retry button — usually wired to TanStack
+ * Query's `refetch()`. The component is `role="alert"` so screen readers
+ * announce it when it appears.
+ */
 export function ApiError({ message, onRetry, className }: Props) {
   return (
     <div
