@@ -4,6 +4,13 @@ type Props = {
   highlight?: "home" | "away";
 };
 
+/**
+ * Pure-SVG sentiment gauge.
+ *
+ * Maps a `-1..1` value to a 220° arc with a colour-coded needle and an
+ * adjacent mood label ("very negative", "neutral", "very positive").
+ * Used twice on the Sentiment Storm page — one per team.
+ */
 export function SentimentGauge({ label, value, highlight = "home" }: Props) {
   const clamped = Math.max(-1, Math.min(1, value));
   // Map -1..1 to 220deg arc starting at -110deg
