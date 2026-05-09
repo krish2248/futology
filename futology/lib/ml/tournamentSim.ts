@@ -52,6 +52,11 @@ export const UCL_R16: readonly BracketSlot[] = [
   },
 ] as const;
 
+/**
+ * Linear-congruential PRNG seeded with a 32-bit integer. Returns a function
+ * that yields uniform [0, 1) numbers. Deterministic so re-runs with the same
+ * seed produce identical brackets — handy for testable visualizations.
+ */
 function seeded(seed: number) {
   let s = seed % 4294967296;
   if (s < 0) s += 4294967296;
@@ -61,6 +66,10 @@ function seeded(seed: number) {
   };
 }
 
+/**
+ * ELO-derived win probability for the home team, with a 30-point home-pitch
+ * bump. Matches the standard FIFA ELO formula: 1 / (1 + 10^((b - a) / 400)).
+ */
 function winProb(home: SimTeam, away: SimTeam): number {
   // Standard ELO win probability with a small home-advantage tilt.
   const HOME_BUMP = 30;
@@ -90,6 +99,11 @@ export type SimulationOutcome = {
   edgeWinCounts: Record<number, number>;
 };
 
+/**
+ * Runs `runs` Monte Carlo simulations of the bracket, tallying how often each
+ * team reaches QF/SF/Final/Champion. Pure function — no I/O, no globals — so
+ * it's safe to port to a Web Worker if `runs` ever exceeds ~25k.
+ */
 export function runSimulation(
   startBracket: readonly BracketSlot[] = UCL_R16,
   runs: number = 10_000,
@@ -146,6 +160,7 @@ export function runSimulation(
   return { results, edgeWinCounts };
 }
 
+/** Converts a tally count into a percentage of total runs (0–100). */
 export function probability(value: number, runs: number): number {
   if (runs === 0) return 0;
   return (value / runs) * 100;
