@@ -3,6 +3,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+/**
+ * Keys for each user-controllable notification channel. Mirrors the
+ * `notifications_enabled` JSONB column in `profiles` (bible §6) so the
+ * Supabase cutover is a one-to-one map.
+ */
 export type NotificationKey =
   | "matchStart"
   | "goal"
@@ -43,6 +48,12 @@ type PreferencesState = {
   setEmailEnabled: (value: boolean) => void;
 };
 
+/**
+ * Persisted Zustand slice for user notification preferences.
+ *
+ * Stored under `futology.preferences` in localStorage; separate from the
+ * session store so toggling a preference doesn't churn the auth slice.
+ */
 export const useNotificationPreferences = create<PreferencesState>()(
   persist(
     (set) => ({
