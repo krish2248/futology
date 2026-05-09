@@ -147,6 +147,15 @@ function buildShots(match: DemoMatch, rnd: () => number): Shot[] {
   return shots;
 }
 
+/**
+ * Builds a tactics snapshot for the TacticBoard page — xG shot dots,
+ * pass-network nodes/edges, and side-bar metrics (xG, PPDA, possession,
+ * field tilt, pass accuracy). Seeded by fixture ID so the diagram is
+ * stable across renders.
+ *
+ * Cutover: replaced by a fetch to a StatsBomb-derived endpoint via the
+ * FastAPI ML service (bible §9.5). Same return shape.
+ */
 export function getDemoTactics(match: DemoMatch): TacticsSnapshot {
   const rnd = seeded(match.id * 17 + 3);
   const shots = buildShots(match, rnd);
