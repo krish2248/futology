@@ -17,6 +17,15 @@ type Props = {
   className?: string;
 };
 
+/**
+ * AI prediction card on the `/predictions` AI tab.
+ *
+ * Renders the ML probability bar, predicted score trio, confidence pill,
+ * and a "Use this prediction" button that copies the suggestion into the
+ * user's prediction store and fires confetti. The expandable footer
+ * surfaces the seeded "key factors" so the user understands *why* the
+ * model leans the way it does.
+ */
 export function PredictionCard({ prediction, className }: Props) {
   const [open, setOpen] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
