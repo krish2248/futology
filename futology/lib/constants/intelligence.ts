@@ -16,6 +16,11 @@ export type IntelFeature = {
   icon: LucideIcon;
 };
 
+/**
+ * The 6 ML-backed features shown on the Intelligence Hub. Slugs are stable
+ * — changing one breaks deep links into `/intelligence/<slug>` pages, so
+ * treat this list as URL-permanent.
+ */
 export const INTEL_FEATURES: readonly IntelFeature[] = [
   {
     slug: "match",
