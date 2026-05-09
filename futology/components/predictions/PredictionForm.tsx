@@ -23,6 +23,16 @@ type Props = {
   onSaved?: (prediction: Prediction) => void;
 };
 
+/**
+ * Score-prediction form used both inline and inside the MatchDetailSheet.
+ *
+ * - Pre-fills with the user's existing prediction for this fixture.
+ * - Locks (becomes read-only) once kickoff has passed (`isLocked`).
+ * - Shows the ML hint chip when `ml` is provided so the user can copy the
+ *   suggested winner with one tap.
+ * - Fires confetti on save and calls `onSaved` so the parent can close
+ *   sheets / advance state machines.
+ */
 export function PredictionForm({
   fixtureId,
   homeTeam,
