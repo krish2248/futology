@@ -120,6 +120,16 @@ function buildLineup(side: "home" | "away", names: readonly string[]): Lineup {
 
 const REFEREES = ["M. Oliver", "A. Marciniak", "S. Marciniak", "J. Mateu Lahoz", "F. Letexier"];
 
+/**
+ * Synthesises the full match-detail payload (events, stats, lineups, H2H)
+ * powering `MatchDetailSheet`. Seeded by fixture ID so the same match
+ * always yields the same detail across renders.
+ *
+ * Cutover: each section gets replaced by a sub-fetch of the corresponding
+ * API-Football endpoint (`/fixtures/events`, `/fixtures/statistics`,
+ * `/fixtures/lineups`, `/fixtures/headtohead`) — the return shape is
+ * already correct.
+ */
 export function getDemoMatchDetail(match: DemoMatch): MatchDetail {
   const rnd = seeded(match.id * 7);
   const minute = match.minute ?? 90;
