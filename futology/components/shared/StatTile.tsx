@@ -7,6 +7,11 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Compact statistic tile — uppercase label, large value, optional hint.
+ * Uses `tabular` numerals so digit changes (live scores, odds, points)
+ * don't reflow the surrounding layout.
+ */
 export function StatTile({ label, value, hint, className }: Props) {
   return (
     <div className={cn("surface px-4 py-3", className)}>
