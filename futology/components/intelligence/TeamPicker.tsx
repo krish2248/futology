@@ -14,6 +14,15 @@ type Props = {
   leagueFilter?: number | null;
 };
 
+/**
+ * Searchable team selector used by the Match Predictor.
+ *
+ * - Click outside or press Esc to close the dropdown.
+ * - `exclude` removes the already-picked team from the list (used to
+ *   prevent picking the same club for both home and away slots).
+ * - `leagueFilter` narrows the picker to a single competition when
+ *   the predictor is launched from a league context.
+ */
 export function TeamPicker({
   label,
   selected,
