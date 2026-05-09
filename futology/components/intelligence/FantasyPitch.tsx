@@ -25,6 +25,13 @@ function placeRow(players: FantasyPlayer[], y: number): Array<FantasyPlayer & { 
   }));
 }
 
+/**
+ * Pitch view of the optimised fantasy XI.
+ *
+ * Players are slotted into rows by position (GK / DEF / MID / FWD), and
+ * the captain gets the gold armband marker. Pure SVG so the component
+ * adapts to mobile widths without external chart deps.
+ */
 export function FantasyPitch({ starters, captain }: Props) {
   const rows = (["GK", "DEF", "MID", "FWD"] as const).flatMap((pos) =>
     placeRow(
