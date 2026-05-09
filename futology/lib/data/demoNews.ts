@@ -40,6 +40,12 @@ function hoursAgo(h: number): string {
   return d.toISOString();
 }
 
+/**
+ * 18 seeded news items spanning 5 categories (transfers / match / analysis /
+ * injuries / tactics). Each item carries `relatedClubIds`, `relatedPlayerIds`
+ * and `relatedLeagueIds` so the home page can personalise the feed against
+ * the user's follow graph.
+ */
 export const NEWS_ITEMS: readonly NewsItem[] = [
   {
     id: "n1",
@@ -261,6 +267,7 @@ export const NEWS_ITEMS: readonly NewsItem[] = [
 
 export type NewsFilter = "all" | NewsCategory;
 
+/** Returns items in the given category, or every item when filter is `"all"`. */
 export function filterByCategory(
   items: readonly NewsItem[],
   category: NewsFilter,
@@ -269,6 +276,7 @@ export function filterByCategory(
   return items.filter((i) => i.category === category);
 }
 
+/** True when an item touches any of the user's followed clubs/players/leagues. */
 export function isPersonalized(
   item: NewsItem,
   followed: { clubs: number[]; players: number[]; leagues: number[] },
@@ -279,6 +287,10 @@ export function isPersonalized(
   return false;
 }
 
+/**
+ * Sorts personalised hits to the top, then breaks ties by publishedAt desc
+ * so the freshest "For you" items always lead the feed.
+ */
 export function rankPersonalized(
   items: readonly NewsItem[],
   followed: { clubs: number[]; players: number[]; leagues: number[] },
