@@ -11,6 +11,14 @@ import { cn } from "@/lib/utils/cn";
 
 const HIDE_NAV_ON = ["/login", "/onboarding"];
 
+/**
+ * Sticky desktop top navigation. Hidden on `/login` and `/onboarding`
+ * so the auth flow renders edge-to-edge.
+ *
+ * Owns the keyboard shortcut for the global search modal:
+ *   - Cmd/Ctrl + K → toggle SearchModal
+ *   - `/` → open SearchModal (when no input is focused)
+ */
 export function Navbar() {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
