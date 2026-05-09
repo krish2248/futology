@@ -301,6 +301,12 @@ Sick-Boy/
 | **formatKickoff** | `lib/utils/format.ts` | Formats ISO date to "Today · HH:MM", "Tomorrow · HH:MM", or "EEE, D MMM · HH:MM" |
 | **formatScore** | `lib/utils/format.ts` | Formats home/away score as "X – Y" or "—" |
 | **formatRelativeMinute** | `lib/utils/format.ts` | Formats minute as "X'" or "X'+" for extra time |
+| **formatTimeAgo** | `lib/utils/timeAgo.ts` | Relative time string — "just now", "5m ago", "2d ago" |
+| **formatPercent** | `lib/utils/percent.ts` | Percentage formatter that accepts both 0–1 ratios and 0–100 values |
+| **formatCompactNumber** | `lib/utils/compactNumber.ts` | Compact number formatter — `1.2K`, `2.5M`, `1.0B` |
+| **clamp** | `lib/utils/clamp.ts` | Numeric clamp to inclusive `[min, max]` range |
+| **truncate** | `lib/utils/truncate.ts` | String truncation with optional ellipsis |
+| **pluralize** | `lib/utils/pluralize.ts` | Picks singular/plural based on count, optional count prefix |
 | **cn** | `lib/utils/cn.ts` | Merges Tailwind classes using clsx and tailwind-merge |
 
 ### Pages
@@ -387,6 +393,14 @@ npx serve out
 
 - **[PROJECT_Sick-Boy.md](./PROJECT_Sick-Boy.md)** — Project bible: vision, features, tech stack, schema, ML specs, API routes, build plan
 - **[SESSION.md](./SESSION.md)** — Living session log. Read first; updated after every working session
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** — How to set up and submit changes
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — High-level shape of the app and the cutover plan
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — GH Pages workflow, future Vercel target, rollback
+- **[docs/DEMO_DATA.md](./docs/DEMO_DATA.md)** — Conventions for the seeded data layer
+- **[CHANGELOG.md](./CHANGELOG.md)** — Release history (Keep a Changelog format)
+- **[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)** — Contributor Covenant 2.1
+- **[SECURITY.md](./SECURITY.md)** — Vulnerability disclosure policy
+- **[CONTRIBUTORS.md](./CONTRIBUTORS.md)** — People who have helped build this
 
 ---
 
