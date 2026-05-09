@@ -78,6 +78,11 @@ function offsetDate(hours: number): Date {
   return d;
 }
 
+/**
+ * Returns the seeded match list — 3 live, 4 finished, 11 scheduled — with
+ * kickoff times computed relative to the current clock so the demo always
+ * looks "today's fixtures" no matter when it's loaded.
+ */
 export function getDemoMatches(): DemoMatch[] {
   return [
     // LIVE — happening now
@@ -110,10 +115,12 @@ export function getDemoMatches(): DemoMatch[] {
   ];
 }
 
+/** Filters a match array down to only currently-live matches. */
 export function liveMatches(matches: DemoMatch[]): DemoMatch[] {
   return matches.filter((m) => m.status === "live");
 }
 
+/** Filters by `MatchStatus`, with `"all"` short-circuiting to identity. */
 export function matchesByStatus(
   matches: DemoMatch[],
   status: MatchStatus | "all",
@@ -122,6 +129,7 @@ export function matchesByStatus(
   return matches.filter((m) => m.status === status);
 }
 
+/** Groups matches by league name, preserving array order within each group. */
 export function matchesByLeague(matches: DemoMatch[]): Map<string, DemoMatch[]> {
   const map = new Map<string, DemoMatch[]>();
   for (const m of matches) {
