@@ -10,6 +10,16 @@ type Props = {
   size?: "sm" | "md";
 };
 
+/**
+ * Three-segment probability bar showing home/draw/away percentages.
+ *
+ * The dominant outcome gets the saturated accent colour; the other two
+ * segments use the muted variant so the eye lands on the most likely
+ * result. Total need not be 100 — segments are normalised internally.
+ *
+ * Renders as `role="img"` with a verbose `aria-label` so screen readers
+ * announce the full breakdown.
+ */
 export function WinProbabilityBar({
   home,
   draw,
