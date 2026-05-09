@@ -7,6 +7,11 @@ export type ClubSeed = {
   founded?: number;
 };
 
+/**
+ * 40+ clubs across the top 6 leagues. IDs match API-Football team IDs so
+ * the cutover is a one-to-one swap. `leagueId` is the foreign key into
+ * `LEAGUES` and powers the `clubsByLeague` grouping helper.
+ */
 export const CLUBS: readonly ClubSeed[] = [
   // Premier League (39)
   { id: 33, name: "Manchester United", shortName: "Man Utd", leagueId: 39, country: "England", founded: 1878 },
@@ -64,14 +69,21 @@ export const CLUBS: readonly ClubSeed[] = [
   { id: 211, name: "Benfica", shortName: "Benfica", leagueId: 94, country: "Portugal", founded: 1904 },
 ] as const;
 
+/** Returns every club seeded for the given league ID. */
 export function clubsByLeague(leagueId: number): ClubSeed[] {
   return CLUBS.filter((c) => c.leagueId === leagueId);
 }
 
+/** Looks up a club by API-Football team ID. */
 export function findClub(id: number): ClubSeed | undefined {
   return CLUBS.find((c) => c.id === id);
 }
 
+/**
+ * Curated set of "popular" club IDs surfaced as quick-pick suggestions
+ * during onboarding. The ordering biases toward the elite-tier clubs the
+ * user is most likely to follow, so the empty-state isn't intimidating.
+ */
 export const CLUB_QUICK_PICKS: readonly number[] = [
   33, 40, 50, 49, 42, 541, 529, 530, 489, 505, 496, 492, 157, 165, 85, 194,
 ] as const;
