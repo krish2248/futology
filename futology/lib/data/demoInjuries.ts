@@ -70,6 +70,11 @@ function isoFromDays(daysOut: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Builds 0–4 injuries per team across 14 positions with severity tiers
+ * (minor / moderate / major) and per-90 contribution loss. Surfaces on
+ * the Injury Intelligence page sorted by total team impact.
+ */
 export function getDemoInjuries(): TeamInjuryImpact[] {
   return CLUBS.map((club, idx) => {
     const rnd = s(club.id * 31 + idx);
