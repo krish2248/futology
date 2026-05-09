@@ -9,6 +9,13 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Designed empty state for "no data yet" surfaces.
+ *
+ * Required on every page that can render zero results — per design
+ * principle #4, empty states are not optional. The optional `action`
+ * slot is the recommended single primary CTA per direction in §1.
+ */
 export function EmptyState({
   icon: Icon,
   title,
