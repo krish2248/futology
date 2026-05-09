@@ -37,6 +37,11 @@ function priceFor(position: FantasyPosition, rnd: () => number): number {
   return Number((lo + rnd() * (hi - lo)).toFixed(1));
 }
 
+/**
+ * Pool of fantasy-league candidates with seeded prices and projected
+ * points. Built from real player IDs in `players.ts` plus filler
+ * synthetic entries to hit a usable squad-builder pool size.
+ */
 export const FANTASY_POOL: readonly FantasyPlayer[] = (() => {
   const out: FantasyPlayer[] = [];
   // Use seeded star players first
@@ -89,6 +94,7 @@ export type FantasyConstraints = {
   risk: "safe" | "balanced" | "bold";
 };
 
+/** Five formation presets selectable in the Fantasy IQ UI. */
 export const FORMATIONS: Record<string, FantasyConstraints["formation"]> = {
   "4-4-2": { GK: 1, DEF: 4, MID: 4, FWD: 2 },
   "4-3-3": { GK: 1, DEF: 4, MID: 3, FWD: 3 },
@@ -123,6 +129,16 @@ function score(player: FantasyPlayer, risk: FantasyConstraints["risk"]): number 
   );
 }
 
+/**
+ * Greedy demo solver for the fantasy squad. Respects the bible §9.4
+ * constraints — 15 players, 2 GK / 5 DEF / 5 MID / 3 FWD, max 3 per
+ * club, budget cap. Risk tolerance biases the picker toward safer or
+ * more differential players.
+ *
+ * Cutover: replaced by a `fetch` to the FastAPI ML service which runs a
+ * proper integer linear programme via PuLP. The return shape is the
+ * same so the UI doesn't change.
+ */
 export function optimizeFantasy(
   pool: readonly FantasyPlayer[],
   constraints: FantasyConstraints,
