@@ -47,6 +47,11 @@ const ZONE_PROFILE: Record<"high" | "mid" | "low", { ppdaRange: [number, number]
   low: { ppdaRange: [13, 18], pressuresRange: [100, 150] },
 };
 
+/**
+ * Synthesises per-team PPDA stats and a 12×8 pressure heatmap for the
+ * Press Intensity page. Heatmap cells are weighted to high / mid / low
+ * blocks based on the team's pressing profile.
+ */
 export function getDemoPress(): PressTeam[] {
   return CLUBS.map((c, i) => {
     const rnd = s(c.id * 19 + i);
