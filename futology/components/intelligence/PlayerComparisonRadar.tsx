@@ -36,6 +36,13 @@ function polygonPoints(stats: RadarAxes): string {
   }).join(" ");
 }
 
+/**
+ * Six-axis radar chart comparing two players (or a player vs himself
+ * baseline). Pure SVG, no chart library — keeps the bundle small.
+ *
+ * Axes are normalised to a 0–1 scale per stat domain so a defender's
+ * pressing radar isn't dwarfed by a forward's goal output.
+ */
 export function PlayerComparisonRadar({
   homeName,
   homeStats,
