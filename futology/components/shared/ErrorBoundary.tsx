@@ -13,6 +13,15 @@ type State = {
   error: Error | null;
 };
 
+/**
+ * Class-based React error boundary used to contain render-time crashes
+ * inside `<main>` or any subtree that can plausibly throw (charts, ML
+ * pages with seeded data). The default fallback shows a recoverable
+ * "Try again" surface; pass `fallback` to override.
+ *
+ * In dev, errors are logged to the console; in prod, they're swallowed
+ * silently so the rest of the app stays usable.
+ */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null };
 
