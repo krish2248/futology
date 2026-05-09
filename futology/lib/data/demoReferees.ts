@@ -39,6 +39,11 @@ const BANK = [
   { name: "François Letexier", league: "UCL" },
 ];
 
+/**
+ * 14 named referees across 6 leagues with seeded card-rate stats and a
+ * "big game" sub-bucket. Powers the Referee Bias page; the big-game
+ * toggle recomputes deltas vs. the all-matches baseline.
+ */
 export const REFEREE_STATS: readonly RefereeStats[] = BANK.map((r, i) => {
   const rnd = s(i + 1);
   const matches = 18 + Math.floor(rnd() * 22);
