@@ -25,6 +25,51 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 7 — 2026-05-09 (skeletons + loading states + JSDoc sweep)
+
+**Goal:** Continue Session 6 work — finish the skeleton/loading-state coverage, document hooks/stores/components/utilities, and expand the Playwright suite.
+
+**Built (40+ atomic commits):**
+
+*Loading skeletons (3 new components, 7 wired loading.tsx files)*
+- `IntelligenceSkeleton`, `ScoresSkeleton`, `PredictionsSkeleton` components added.
+- `loading.tsx` added for `/leagues`, `/clubs`, `/profile`, `/news`, `/intelligence`, `/scores`, `/predictions` — Next.js automatically streams these while route segments load.
+
+*JSDoc sweep across hooks, stores, ML, components*
+- Hooks: `useLiveScores`, `useFixtures`, `useMatchDetail`, `useStandings`, `useIsClient`.
+- Stores: `useSession`, `useNotificationPreferences`, `pointsFor` settlement helper.
+- Utils: `cn`, `formatEUR`, `formatEURSigned`.
+- ML: `runSimulation`, `winProb`, `seeded`, `probability` (tournamentSim), `predictTransferValue` (transfer).
+- Constants: `PRIMARY_NAV`, `SECONDARY_NAV`, `INTEL_FEATURES`.
+- API: `isDemoMode`, `cacheHeaders`, `jsonResponse`.
+- Shared components: `Card`, `StatTile`, `LiveBadge`, `EmptyState`, `PageHeader`, `Toggle`, `ErrorBoundary`, `ApiError`, `SearchModal`.
+- Layout: `Navbar`, `MobileNav`, `NotificationBell`, `Providers`.
+- Cards: `MatchCard`, `NewsCard`.
+- Predictions: `PredictionForm`, `WinProbabilityBar`, `ScoresPicker`.
+
+*Playwright E2E expansion*
+- `homepage.spec.ts` — hero copy, live strip, CTA presence.
+- `intelligence.spec.ts` — hub, match predictor, player pulse, extras hub.
+- `navigation.spec.ts` — primary tabs, clubs/leagues indices, news, 404.
+- `predictions.spec.ts` — page render, tab UI, AI cards.
+- `scores.spec.ts` — page render, filter chips, groupings.
+- `auth.spec.ts` — login form, onboarding, submit button.
+
+**Phase 7 Progress (continued):**
+- ✅ Loading skeletons fully integrated across major routes.
+- ✅ JSDoc coverage now spans hooks, stores, ML, utils, constants, layout/shared/cards/predictions components.
+- ✅ Playwright suite expanded from 1 → 6 spec files.
+- ⏳ Lighthouse audit ≥ 90 still outstanding.
+- ⏳ Vercel + Supabase cutover still outstanding.
+
+**NEXT SESSION STARTS HERE:**
+1. Run the Playwright suite locally (`npx playwright test`) and stabilise any flakes.
+2. Run a Lighthouse audit on the live GH Pages URL — target ≥ 90 across all four scores. (Issue #2)
+3. Decide on the Supabase + Vercel cutover (real-services migration) vs. Phase 3 (FastAPI ML service).
+4. Test the next-pwa service worker on a deployed build.
+
+---
+
 ### Session 6 — 2026-05-02 (legitimate contribution building - FINAL STATE)
 
 **Goal:** Build legitimate GitHub contributions through real code improvements, documentation, and features.
