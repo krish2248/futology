@@ -14,6 +14,12 @@ export type ClusterProfile = {
   definingStats: string[];
 };
 
+/**
+ * Six named playing-style clusters, one per bible §9.2 KMeans bucket.
+ * Each profile carries a colour token for the scatter plot, an English
+ * description for the side panel, and seeded centroid coordinates so
+ * the cluster ellipses always render in the same positions.
+ */
 export const CLUSTERS: readonly ClusterProfile[] = [
   {
     id: "target-striker",
@@ -65,6 +71,7 @@ export const CLUSTERS: readonly ClusterProfile[] = [
   },
 ] as const;
 
+/** Looks up a cluster profile by ID. Throws on unknown IDs (closed enum). */
 export function clusterById(id: ClusterId): ClusterProfile {
   const c = CLUSTERS.find((x) => x.id === id);
   if (!c) throw new Error(`Unknown cluster: ${id}`);
