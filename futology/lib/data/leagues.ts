@@ -7,6 +7,14 @@ export type LeagueSeed = {
   tier: "elite" | "major" | "rising";
 };
 
+/**
+ * 20 seeded leagues used across the demo. IDs match API-Football so the
+ * Phase 2 cutover doesn't have to remap anything — the same `id` works
+ * against `https://v3.football.api-sports.io/leagues?id=<id>`.
+ *
+ * `tier` drives the tier-bonus modulation in the match predictor (bible
+ * §9.1) and the "Popular leagues" sort order on the browse page.
+ */
 export const LEAGUES: readonly LeagueSeed[] = [
   { id: 39, name: "Premier League", shortName: "EPL", country: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", tier: "elite" },
   { id: 140, name: "La Liga", shortName: "LaLiga", country: "Spain", flag: "🇪🇸", tier: "elite" },
@@ -30,6 +38,7 @@ export const LEAGUES: readonly LeagueSeed[] = [
   { id: 128, name: "Argentine Primera", shortName: "Primera", country: "Argentina", flag: "🇦🇷", tier: "major" },
 ] as const;
 
+/** Looks up a league by API-Football ID. Returns undefined for unknown IDs. */
 export function findLeague(id: number): LeagueSeed | undefined {
   return LEAGUES.find((l) => l.id === id);
 }
