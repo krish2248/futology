@@ -99,6 +99,11 @@ export const api = {
     return resolved<DemoMatch[]>(withTeam);
   },
 
+  /**
+   * Returns the league meta + qualification bands + 16-team standings table.
+   * Cutover: the body becomes a `fetch` to the Supabase view that proxies
+   * API-Football standings — the return shape is already correct.
+   */
   standings: (leagueId: number) => {
     const league = findLeague(leagueId);
     const rows = getDemoStandings(leagueId);
@@ -123,6 +128,11 @@ export const api = {
     return resolved<MatchDetail>(getDemoMatchDetail(match));
   },
 
+  /**
+   * Local fuzzy-search across leagues, clubs, and players. Empty query
+   * short-circuits to an empty array; results are capped at 24 to keep
+   * the search modal scrollable without virtualisation.
+   */
   search: (
     query: string,
     type: "all" | "team" | "player" | "league" = "all",
