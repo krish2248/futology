@@ -18,6 +18,12 @@ export type ExtraFeature = {
   status: "ready" | "soon";
 };
 
+/**
+ * Phase 6 wishlist features. Each entry has a stable `slug` that powers
+ * the deep-link route under `/intelligence/extras/<slug>`. The `status`
+ * field marks whether the feature is shipped or queued — the Extras hub
+ * UI uses it to dim out unfinished cards.
+ */
 export const EXTRA_FEATURES: readonly ExtraFeature[] = [
   {
     slug: "tournament-simulator",
