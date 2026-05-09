@@ -7,6 +7,11 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Standard page-level h1 + subtitle + optional trailing action slot.
+ * Used on every top-level route to keep title typography and spacing
+ * consistent across pages.
+ */
 export function PageHeader({ title, description, action, className }: Props) {
   return (
     <div className={cn("mb-6 flex items-end justify-between gap-4", className)}>
