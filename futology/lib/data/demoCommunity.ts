@@ -37,6 +37,11 @@ const futureISO = (days: number): string => {
   return d.toISOString();
 };
 
+/**
+ * Three active community polls (EPL winner / UCL winner / Ballon d'Or).
+ * Vote counts ride along on each option so the bar fills look populated
+ * before any real votes come in.
+ */
 export const COMMUNITY_POLLS: readonly CommunityPoll[] = [
   {
     id: "poll_epl_winner",
@@ -79,6 +84,7 @@ export const COMMUNITY_POLLS: readonly CommunityPoll[] = [
   },
 ] as const;
 
+/** Three "trending" picks shown on the Community tab — what other users are predicting. */
 export const TRENDING_PICKS: readonly TrendingPick[] = [
   {
     fixtureId: 8,
@@ -106,6 +112,7 @@ export const TRENDING_PICKS: readonly TrendingPick[] = [
   },
 ];
 
+/** Top 10 anonymised accuracy-leader rows — names are pseudonyms by design. */
 export const ACCURACY_LEADERS: readonly AccuracyLeader[] = [
   { rank: 1, username: "data_dean", predictions: 142, correct: 78, accuracy: 55, points: 312 },
   { rank: 2, username: "tactical_anya", predictions: 128, correct: 70, accuracy: 55, points: 286 },
