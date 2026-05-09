@@ -186,6 +186,15 @@ function winnerFromScores(home: number, away: number): Winner {
   return "draw";
 }
 
+/**
+ * Scores a settled prediction against the final result.
+ * - Exact score match → 3 points
+ * - Correct winner only → 1 point
+ * - Wrong winner → 0 points
+ *
+ * Lifted as-is when settlement moves to a Supabase Edge Function — the
+ * 3/1/0 contract is bible §5 / §6.
+ */
 function pointsFor(prediction: Prediction, actualHome: number, actualAway: number): number {
   if (
     prediction.predictedHomeScore === actualHome &&
@@ -230,6 +239,19 @@ const EMPTY_USER_STATE = {
   | "notifications"
 >;
 
+/**
+ * Persisted Zustand store backing the demo authentication and follow-graph.
+ *
+ * Persistence: localStorage under `futology.session`, with a v2 `migrate`
+ * step so existing v1 sessions keep their followed lists.
+ *
+ * Cookie shadow: `signIn` also writes `futology_session=1` so middleware
+ * (or AuthGate after the static-export refactor) can gate routes without
+ * reading the persisted slice.
+ *
+ * Cutover: replace `signIn` with `supabase.auth.signInWithOtp` and the
+ * cookie with the Supabase SSR cookie — the rest of the store survives.
+ */
 export const useSession = create<SessionState>()(
   persist(
     (set, get) => ({
