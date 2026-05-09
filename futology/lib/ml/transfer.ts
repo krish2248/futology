@@ -30,6 +30,16 @@ const POSITION_BASE: Record<PlayerStatLine["position"], number> = {
   FWD: 55_000_000,
 };
 
+/**
+ * Predicts a transfer market value (EUR) for a player using a SHAP-style
+ * additive model: position base value + per-stat contributions + jitter.
+ *
+ * Returns a predicted value, an 80% confidence band, the top 5 driving
+ * factors (positive or negative), and 3 nearest-neighbour comparable players.
+ *
+ * Phase 3 cutover: this function gets replaced by a `fetch` to the FastAPI
+ * ML service (bible §9.3). The return shape stays identical.
+ */
 export function predictTransferValue(
   player: PlayerStatLine,
 ): TransferValuation {
@@ -84,12 +94,14 @@ export function predictTransferValue(
   };
 }
 
+/** Compact EUR formatter — €5.0M / €50K / €123. */
 export function formatEUR(value: number): string {
   if (value >= 1_000_000) return `€${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `€${(value / 1_000).toFixed(0)}K`;
   return `€${value}`;
 }
 
+/** Same as formatEUR but with explicit +/− sign — used for SHAP factor bars. */
 export function formatEURSigned(value: number): string {
   const sign = value > 0 ? "+" : value < 0 ? "−" : "";
   return `${sign}${formatEUR(Math.abs(value))}`;
