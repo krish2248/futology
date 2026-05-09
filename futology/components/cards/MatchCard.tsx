@@ -13,6 +13,16 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Match summary card. Renders three implicit visual variants based on
+ * `match.status`:
+ * - `live` → pulsing LiveBadge + minute counter, current score
+ * - `finished` → final score, no badge
+ * - `scheduled` → kickoff time, no score
+ *
+ * `compact` is the dense variant used inside the LiveStrip on the home
+ * page; `default` is for the scores grid and league/club fixture lists.
+ */
 export function MatchCard({ match, variant = "default", className }: Props) {
   const isLive = match.status === "live";
   const isFinished = match.status === "finished";
