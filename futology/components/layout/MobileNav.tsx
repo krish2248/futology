@@ -7,6 +7,13 @@ import { cn } from "@/lib/utils/cn";
 
 const HIDE_NAV_ON = ["/login", "/onboarding"];
 
+/**
+ * Fixed bottom-tab navigation, mobile-only (hidden at `md` breakpoint).
+ *
+ * Each tap target is at least 44px (iOS HIG), respects `safe-area-inset`
+ * for devices with home indicators, and uses `active:scale-95` for the
+ * tactile press feedback.
+ */
 export function MobileNav() {
   const pathname = usePathname();
   if (HIDE_NAV_ON.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
