@@ -24,6 +24,14 @@ import { cn } from "@/lib/utils/cn";
 
 type Modal = null | "create" | "join";
 
+/**
+ * Prediction Leagues tab — create, join, browse, and inspect leaderboards.
+ *
+ * Two modal states (`create`, `join`) handle the new-league flow and the
+ * invite-code lookup. Public-leagues seed feeds the Browse list before
+ * the user creates anything of their own. Detail view renders the
+ * leaderboard with rank arrows and highlights the active user's row.
+ */
 export function PredictionLeagues() {
   const ready = useIsClient();
   const myLeagues = useSession((s) => s.predictionLeagues);
