@@ -5,6 +5,14 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Pulsing "Live" indicator for in-progress matches.
+ *
+ * `dot` is a compact single-pixel pulse for tight UI (cards, list rows).
+ * `full` is the labelled pill used in headers and detail sheets.
+ *
+ * Both honour `prefers-reduced-motion` via the `.live-dot` keyframe.
+ */
 export function LiveBadge({ variant = "full", className }: Props) {
   if (variant === "dot") {
     return <span aria-label="Live" className={cn("live-dot", className)} />;
