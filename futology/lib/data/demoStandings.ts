@@ -24,6 +24,11 @@ export type StandingsBands = {
   relegation: number; // bottom N spots get relegation color
 };
 
+/**
+ * Per-league qualification band sizes used to colour the standings table.
+ * `ucl` rows get the gold accent, `uel` and `conference` get diminishing
+ * European-spot accents, and `relegation` rows get the live-red trim.
+ */
 export const BANDS_BY_LEAGUE: Record<number, StandingsBands> = {
   39: { ucl: 4, uel: 1, conference: 1, relegation: 3 }, // Premier League
   140: { ucl: 4, uel: 1, conference: 1, relegation: 3 }, // La Liga
@@ -40,6 +45,12 @@ function seeded(seed: number) {
   };
 }
 
+/**
+ * Builds a deterministic 16-team standings table for the given league.
+ * Seeded by `leagueId` so the same league always produces the same
+ * ordering and per-team stats — the standings page is SSG'd, so any
+ * non-determinism here would cause hydration mismatches.
+ */
 export function getDemoStandings(leagueId: number): StandingRow[] {
   const league = findLeague(leagueId);
   if (!league) return [];
@@ -92,6 +103,7 @@ export function getDemoStandings(leagueId: number): StandingRow[] {
   return rows;
 }
 
+/** Looks up qualification bands; falls back to a sensible default for unknown leagues. */
 export function getBandsForLeague(leagueId: number): StandingsBands {
   return (
     BANDS_BY_LEAGUE[leagueId] ?? {
