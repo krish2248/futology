@@ -7,6 +7,12 @@ import type { MatchStatus } from "@/lib/data/demoMatches";
 const LIVE_POLL_MS = 30_000;
 const FIXTURES_STALE_MS = 5 * 60_000;
 
+/**
+ * Polls the live-scores endpoint every 30 seconds while mounted.
+ *
+ * Background polling is disabled to avoid burning RapidAPI quota when
+ * the tab is not visible. Stale time is 0 so a remount always refetches.
+ */
 export function useLiveScores() {
   return useQuery({
     queryKey: ["football", "live-scores"],
@@ -17,6 +23,10 @@ export function useLiveScores() {
   });
 }
 
+/**
+ * Fetches fixtures filtered by league, team, and/or status.
+ * Cached for 5 minutes since fixture lists rarely change.
+ */
 export function useFixtures(params?: {
   league?: number;
   team?: number;
@@ -29,6 +39,10 @@ export function useFixtures(params?: {
   });
 }
 
+/**
+ * Fetches full match detail (events, stats, lineups, H2H) for a fixture.
+ * Pass `null` to disable the query — useful when no match is selected.
+ */
 export function useMatchDetail(fixtureId: number | null) {
   return useQuery({
     queryKey: ["football", "match", fixtureId],
@@ -37,6 +51,10 @@ export function useMatchDetail(fixtureId: number | null) {
   });
 }
 
+/**
+ * Fetches the standings table for a given league ID.
+ * Cached for 5 minutes since standings change at most once per match-day.
+ */
 export function useStandings(leagueId: number) {
   return useQuery({
     queryKey: ["football", "standings", leagueId],
