@@ -6,6 +6,10 @@ export type TournamentSeed = {
   flag: string;
 };
 
+/**
+ * 10 international and major domestic-cup tournaments offered during
+ * onboarding. IDs match API-Football competition IDs.
+ */
 export const TOURNAMENTS: readonly TournamentSeed[] = [
   { id: 1, name: "FIFA World Cup", shortName: "World Cup", region: "International", flag: "🌍" },
   { id: 4, name: "UEFA European Championship", shortName: "Euros", region: "Europe", flag: "🇪🇺" },
@@ -19,6 +23,7 @@ export const TOURNAMENTS: readonly TournamentSeed[] = [
   { id: 16, name: "Coupe de France", shortName: "Coupe", region: "France", flag: "🇫🇷" },
 ] as const;
 
+/** Looks up a tournament by ID. Returns undefined for unknown IDs. */
 export function findTournament(id: number): TournamentSeed | undefined {
   return TOURNAMENTS.find((t) => t.id === id);
 }
