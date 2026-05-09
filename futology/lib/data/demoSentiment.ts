@@ -72,6 +72,16 @@ function emotionFor(text: string): SentimentReaction["emotion"] {
   return "neutral";
 }
 
+/**
+ * Generates a 90-minute sentiment walk plus a sampler of fan reactions.
+ *
+ * The walk is a seeded random walk biased by goal events — sentiment
+ * jumps in favour of the scoring side at each goal minute. The reaction
+ * sampler picks 6 timestamped quotes that mirror the walk's tone.
+ *
+ * Cutover: replaced by a Reddit/twitter sentiment pipeline aggregated
+ * by the FastAPI ML service (bible §9.6). Same return shape.
+ */
 export function getDemoSentiment(match: DemoMatch): SentimentSnapshot {
   const minute = match.minute ?? 90;
   const finalMinute = match.status === "scheduled" ? 0 : minute;
