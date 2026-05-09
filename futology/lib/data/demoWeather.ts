@@ -84,6 +84,13 @@ function buildSplits(seed: number, baseMatches: number): WeatherSplit[] {
   });
 }
 
+/**
+ * Per-league weather splits for the Weather Impact page.
+ *
+ * Each league has 5 weather buckets (clear / rain / heat / wind / cold)
+ * with seeded match counts, win-rate trios (home/draw/away) and goals
+ * per match. Counts add up to a real-ish league season's match volume.
+ */
 export const WEATHER_LEAGUES: readonly WeatherLeague[] = [
   { leagueId: 39, leagueName: "Premier League", splits: buildSplits(7, 380) },
   { leagueId: 140, leagueName: "La Liga", splits: buildSplits(11, 380) },
