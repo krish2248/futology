@@ -14,6 +14,16 @@ import {
 } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * "My Predictions" view inside the Predictions page.
+ *
+ * - Reads predictions and stats from the session store.
+ * - Auto-settles any prediction whose fixture has transitioned to
+ *   `finished` via the polling fixtures hook — runs on render so this
+ *   is the trigger point that becomes a Supabase Edge cron in Phase 5.
+ * - Splits the list into upcoming (still editable via the sheet) and
+ *   settled (3/1/0 result chip).
+ */
 export function MyPredictions() {
   const ready = useIsClient();
   const predictions = useSession((s) => s.predictions);
