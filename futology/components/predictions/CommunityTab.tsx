@@ -19,6 +19,17 @@ import {
 } from "@/lib/data/demoCommunity";
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * Community tab on the Predictions page.
+ *
+ * Three sections, all driven by the seeded `demoCommunity.ts` data:
+ * - Active polls (vote-once with bar fill animated by vote count).
+ * - Trending predictions (what other users are picking).
+ * - Anonymous accuracy-leaders table.
+ *
+ * Cutover: Polls become a Supabase Realtime subscription on the `polls`
+ * table; trending and leaders become materialised views.
+ */
 export function CommunityTab() {
   const ready = useIsClient();
 
