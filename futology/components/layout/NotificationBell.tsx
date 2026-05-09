@@ -18,6 +18,17 @@ const SEED_FALLBACK: AppNotification[] = [
   },
 ];
 
+/**
+ * Bell button + popover that surfaces user notifications from the
+ * session store, with a seed fallback so the popover never looks empty
+ * on a first visit.
+ *
+ * Closes on Escape and on outside click. Mark-all-read is wired through
+ * to the store so the unread count is the source of truth.
+ *
+ * Cutover: replace the store reads with a Supabase Realtime subscription
+ * on the `notifications` table — the popover shape stays the same.
+ */
 export function NotificationBell() {
   const ready = useIsClient();
   const stored = useSession((s) => s.notifications);
