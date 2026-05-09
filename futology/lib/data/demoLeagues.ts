@@ -38,6 +38,11 @@ const seedMembers = (count: number, seed: number) => {
   });
 };
 
+/**
+ * Three seeded public prediction leagues (Global, EPL Picks, UCL Bracket)
+ * with synthetic member rosters. Surfaced on `/predictions` → Leagues tab
+ * before the user creates or joins their own.
+ */
 export const PUBLIC_LEAGUES_SEED: readonly PredictionLeague[] = [
   {
     id: "public_global",
