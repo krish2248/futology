@@ -5,6 +5,14 @@ type Props = React.HTMLAttributes<HTMLDivElement> & {
   elevated?: boolean;
 };
 
+/**
+ * The standard surface container used across pages.
+ *
+ * - `elevated` swaps the base background to `.surface-elevated` for cards
+ *   that should pop above the default page surface.
+ * - `hover` adds the accent ring on hover — opt-in because not every card
+ *   is interactive.
+ */
 export function Card({
   className,
   hover = false,
