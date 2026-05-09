@@ -17,6 +17,11 @@ export type NavItem = {
 const startsWith = (prefix: string) => (pathname: string) =>
   pathname === prefix || pathname.startsWith(`${prefix}/`);
 
+/**
+ * Primary 5-tab navigation rendered as the bottom bar on mobile and the
+ * top bar on desktop. Single source of truth — both Navbar and MobileNav
+ * iterate over this so they never drift apart.
+ */
 export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/", label: "Home", icon: Home, match: (p) => p === "/" },
   { href: "/scores", label: "Scores", icon: Trophy, match: startsWith("/scores") },
@@ -25,6 +30,11 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/profile", label: "Profile", icon: User, match: startsWith("/profile") },
 ] as const;
 
+/**
+ * Secondary nav links shown in the desktop top bar only. These surface
+ * the entity browse pages (clubs, leagues, tournaments) without crowding
+ * the mobile bottom-tab area.
+ */
 export const SECONDARY_NAV: readonly { href: string; label: string }[] = [
   { href: "/clubs", label: "Clubs" },
   { href: "/leagues", label: "Leagues" },
