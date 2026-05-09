@@ -48,6 +48,13 @@ function buildLine(
     .join(" ");
 }
 
+/**
+ * Pure-SVG sentiment timeline showing per-minute home and away mood.
+ *
+ * Goal events are rendered as vertical guide lines so the user can see
+ * how a goal swings sentiment. Smooth-curve interpolation keeps the
+ * trace readable even when minute-by-minute jitter is high.
+ */
 export function SentimentTimeline({
   timeline,
   goalEvents,
