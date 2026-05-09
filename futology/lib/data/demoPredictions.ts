@@ -34,6 +34,13 @@ function deterministic(seed: number) {
   };
 }
 
+/**
+ * Returns ML-style predictions for every non-finished demo match.
+ *
+ * Probabilities are seeded by fixture ID so the same match always
+ * produces the same prediction across renders — important because the
+ * AI tab on `/predictions` is rebuilt on every navigation.
+ */
 export function getDemoPredictions(): DemoPrediction[] {
   const matches = getDemoMatches().filter((m) => m.status !== "finished");
   return matches.map((match) => {
