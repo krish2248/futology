@@ -14,6 +14,15 @@ type Props = {
   variant?: "default" | "compact";
 };
 
+/**
+ * News article card.
+ *
+ * - Category badge color comes from `NEWS_CATEGORY_COLOR`.
+ * - Pass `personalized` to surface the "For you" pill — used when the
+ *   article matches the user's followed clubs/players/leagues.
+ * - `compact` variant trims padding for dense lists; `default` is for
+ *   the home feed and the full news page.
+ */
 export function NewsCard({
   item,
   personalized,
