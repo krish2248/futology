@@ -102,6 +102,12 @@ function severityFromShift(maxShift: number): OddsMovement["severity"] {
   return "info";
 }
 
+/**
+ * Generates opening + current odds across 5 bookmakers per upcoming or
+ * live fixture. Severity (`alert` / `watch` / `info`) escalates when
+ * implied probability shifts ≥ 12 percentage points — that's the cue
+ * the Odds Movement Alert page surfaces.
+ */
 export function getDemoOdds(): OddsMovement[] {
   const candidates = getDemoMatches().filter((m) => m.status !== "finished");
   return candidates.map((match) => {
