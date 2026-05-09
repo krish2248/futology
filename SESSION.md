@@ -25,6 +25,62 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 9 — 2026-05-10 (utility helpers, hooks, deeper docs, full JSDoc coverage)
+
+**Goal:** Continue Session 8 — broaden the utility/hooks layer, add architecture and deployment docs, finish JSDoc coverage of every demo data module and every interactive component.
+
+**Built (40+ atomic commits):**
+
+*New utility helpers (`lib/utils/`)*
+- `clamp` — numeric clamp to inclusive `[min, max]` range.
+- `formatPercent` — percentage formatter accepting both 0–1 ratios and 0–100 values.
+- `pluralize` — singular/plural picker with optional count prefix.
+- `formatCompactNumber` — compact formatter — `1.2K`, `2.5M`, `1.0B`.
+- `formatTimeAgo` — relative-time helper ("just now", "5m ago", "2d ago").
+- `truncate` — string truncation with optional ellipsis.
+- `debounce` — generic debounce with `cancel()` for non-React contexts.
+- Array helpers — `chunk`, `unique`, `groupBy`, `sampleSeeded`.
+
+*New React hooks (`hooks/`)*
+- `useDebounce` — debounced state mirror used by SearchModal.
+- `useMediaQuery` — SSR-safe responsive boolean.
+- `useLocalStorage` — persisted state with cross-tab `storage` event sync.
+- `useClickOutside` — ref-based outside-pointer handler.
+- `useEscapeKey` — keyboard parity for popovers and modals.
+
+*New configuration*
+- `lib/constants/app.ts` — single source of truth for product name, tagline, colours, URLs.
+- `scripts/check_env.ts` — pre-deploy validator that distinguishes demo vs real-services modes.
+
+*Architecture documentation*
+- `docs/ARCHITECTURE.md` — high-level shape of the app, cutover invariants, static-export vs SSR notes.
+- `docs/DEPLOYMENT.md` — GH Pages workflow, planned Vercel target, rollback path, pre-deploy checklist.
+- `docs/DEMO_DATA.md` — conventions for the seeded data layer; identity invariants; cutover guide.
+- `CONTRIBUTORS.md` — contributor list and acknowledgements.
+- README updated to surface the new utilities and doc files.
+
+*Final JSDoc sweep*
+- Components: `PredictionCard`, `MyPredictions`, `PredictionLeagues`, `CommunityTab`, `TeamPicker`, `PlayerPicker`, `FantasyPitch`, `PlayerComparisonRadar`, `PlayerClusterChart`, `SentimentGauge`, `SentimentTimeline`, `MatchDetailSheet`, `StandingsTable`.
+- Demo data: `demoMatchDetail`, `demoFantasy`, `demoTactics`, `demoPlayerStats`, `demoSentiment`, `playerClusters`, `demoMomentum`, `demoReferees`, `demoWeather`, `demoPress`, `demoInjuries`, `demoOdds`.
+- Constants: `EXTRA_FEATURES`.
+
+**Phase 7 Progress (continued):**
+- ✅ JSDoc coverage now spans every module worth documenting — components, hooks, stores, ML, utils, constants, demo data layer.
+- ✅ Architecture, deployment, and demo-data docs are in place under `docs/`.
+- ✅ Reusable hook layer expanded — `useDebounce`, `useMediaQuery`, `useLocalStorage`, `useClickOutside`, `useEscapeKey` are all available for upcoming features.
+- ✅ Pre-deploy env-check script ready to wire into the Vercel cutover.
+- ⏳ Lighthouse audit ≥ 90 still outstanding.
+- ⏳ Vercel + Supabase cutover still outstanding.
+
+**NEXT SESSION STARTS HERE:**
+1. Migrate the existing in-component implementations of click-outside / escape-key / debounce over to the new shared hooks (SearchModal, NotificationBell, MatchDetailSheet, TeamPicker, PlayerPicker).
+2. Run the full Playwright suite locally and stabilise any flakes.
+3. Run a Lighthouse audit on the live GH Pages URL — target ≥ 90 across all four scores. (Issue #2)
+4. Decide on the Supabase + Vercel cutover (real-services migration) vs. Phase 3 (FastAPI ML service).
+5. Cut a `v0.7.0` release tag once the next batch of Phase 7 work lands.
+
+---
+
 ### Session 8 — 2026-05-10 (data-layer JSDoc, repo hygiene, expanded E2E)
 
 **Goal:** Continue Session 7 — finish JSDoc coverage on the data layer, add open-source repo hygiene files (CHANGELOG / CODE_OF_CONDUCT / SECURITY / issue + PR templates), and expand the Playwright suite to cover browse pages, wishlist features, and profile.
