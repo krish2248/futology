@@ -9,6 +9,13 @@ type Props = {
   disabled?: boolean;
 };
 
+/**
+ * Accessible iOS-style switch.
+ *
+ * Renders as `role="switch"` with `aria-checked` so screen readers
+ * announce state changes. The `label` is required and surfaces as the
+ * accessible name — visible labelling is the caller's responsibility.
+ */
 export function Toggle({ checked, onChange, label, disabled }: Props) {
   return (
     <button
