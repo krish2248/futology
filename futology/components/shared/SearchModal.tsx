@@ -32,6 +32,17 @@ type Props = {
   onClose: () => void;
 };
 
+/**
+ * Cmd+K (or `/`) global search modal.
+ *
+ * - Debounced 300 ms while typing.
+ * - 4 tabs (All / Teams / Players / Leagues) filter the result list.
+ * - Recent searches persisted under `futology.search.recent` (cap 5).
+ * - Keyboard navigable: ↑/↓ moves selection, Enter navigates, Esc closes.
+ *
+ * Currently reads `lib/data/*` directly — could move to `/api/football/search`
+ * for consistency, but local debounced search is already fast enough.
+ */
 export function SearchModal({ open, onClose }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
