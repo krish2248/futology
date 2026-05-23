@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { PLAYER_STATS, type PlayerStatLine } from "@/lib/data/demoPlayerStats";
 import { clusterById } from "@/lib/data/playerClusters";
+import { useClickOutside } from "@/hooks/useClickOutside";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { cn } from "@/lib/utils/cn";
 
 type Props = {
@@ -37,26 +39,9 @@ export function PlayerPicker({ label, selected, onSelect, exclude }: Props) {
     }).slice(0, 12);
   }, [query, exclude]);
 
-  useEffect(() => {
-    function onClickOutside(event: MouseEvent) {
-      if (
-        open &&
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("mousedown", onClickOutside);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onClickOutside);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useClickOutside(containerRef, close);
+  useEscapeKey(close, open);
 
   return (
     <div ref={containerRef} className="relative">
