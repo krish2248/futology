@@ -13,6 +13,8 @@ import { Search, X, Trophy, Shield, User, Clock } from "lucide-react";
 import { LEAGUES } from "@/lib/data/leagues";
 import { CLUBS } from "@/lib/data/clubs";
 import { PLAYERS } from "@/lib/data/players";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { cn } from "@/lib/utils/cn";
 
 type SearchResult = {
@@ -47,21 +49,14 @@ export function SearchModal({ open, onClose }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
+  const debounced = useDebounce(query, 300);
   const [tab, setTab] = useState<Tab>("all");
   const [highlight, setHighlight] = useState(0);
   const [recents, setRecents] = useState<SearchResult[]>([]);
 
-  // Debounce 300ms per bible spec
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(query), 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
   useEffect(() => {
     if (!open) return;
     setQuery("");
-    setDebounced("");
     setHighlight(0);
     setTab("all");
     try {
@@ -157,14 +152,11 @@ export function SearchModal({ open, onClose }: Props) {
     [onClose, recents, router],
   );
 
+  useEscapeKey(() => onClose(), open);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setHighlight((h) => Math.min(visible.length - 1, h + 1));
@@ -181,7 +173,7 @@ export function SearchModal({ open, onClose }: Props) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, visible, highlight, choose, onClose]);
+  }, [open, visible, highlight, choose]);
 
   return (
     <AnimatePresence>
