@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Target } from "lucide-react";
 import { useMatchDetail } from "@/hooks/useLiveScores";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { LiveBadge } from "@/components/shared/LiveBadge";
 import { ApiError } from "@/components/shared/ApiError";
 import { PredictionForm } from "@/components/predictions/PredictionForm";
@@ -57,14 +58,7 @@ export function MatchDetailSheet({ fixtureId, onClose }: Props) {
     if (open) setTab("overview");
   }, [fixtureId, open]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  useEscapeKey(onClose, open);
 
   return (
     <AnimatePresence>
