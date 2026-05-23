@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { CLUBS, type ClubSeed } from "@/lib/data/clubs";
 import { findLeague } from "@/lib/data/leagues";
+import { useClickOutside } from "@/hooks/useClickOutside";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { cn } from "@/lib/utils/cn";
 
 type Props = {
@@ -47,26 +49,9 @@ export function TeamPicker({
     }).slice(0, 12);
   }, [query, exclude, leagueFilter]);
 
-  useEffect(() => {
-    function onClickOutside(event: MouseEvent) {
-      if (
-        open &&
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("mousedown", onClickOutside);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onClickOutside);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useClickOutside(containerRef, close);
+  useEscapeKey(close, open);
 
   return (
     <div ref={containerRef} className="relative">
