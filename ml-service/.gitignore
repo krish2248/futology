@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Testing / coverage
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ML artifacts (trained models stay out of git; Railway pulls them at start)
+trained_models/
+*.pkl
+*.joblib
+
+# Env
+.env
+.env.local
