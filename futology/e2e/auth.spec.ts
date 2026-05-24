@@ -9,7 +9,7 @@ test.describe('Auth', () => {
 
   test('onboarding page renders', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.locator('main, body')).toBeVisible();
+    await expect(page.locator('main')).toBeVisible();
   });
 
   test('login page has submit button', async ({ page }) => {
