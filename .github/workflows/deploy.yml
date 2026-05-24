@@ -49,6 +49,17 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: /futology
           NEXT_PUBLIC_APP_URL: https://krish2248.github.io/futology
           NEXT_PUBLIC_APP_NAME: FUTOLOGY
+          # Supabase publishable values — safe to inline (designed to
+          # live in the browser bundle). Rotate via the Supabase
+          # dashboard and edit this file if the project ever moves.
+          NEXT_PUBLIC_SUPABASE_URL: https://zlivysbodcgmalycetfr.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_hcHSeaKUHpy2Bh8SvtK1-A_2ckiiuAC
+          # ML service URL + token — set via GitHub Actions repo
+          # secrets once the Hugging Face Space is deployed. Empty
+          # values fall back to the in-bundle synthetic predictors,
+          # so the live site keeps working before the secrets exist.
+          NEXT_PUBLIC_ML_API_URL: ${{ secrets.NEXT_PUBLIC_ML_API_URL }}
+          NEXT_PUBLIC_ML_API_TOKEN: ${{ secrets.NEXT_PUBLIC_ML_API_TOKEN }}
 
       - name: Add .nojekyll (defense in depth)
         run: touch out/.nojekyll
