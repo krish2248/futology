@@ -1,35 +1,38 @@
 """End-to-end tests for the FUTOLOGY ML microservice.
 
 Uses FastAPI's TestClient (httpx under the hood) so no live uvicorn is
-needed. Each test is isolated by mutating `os.environ` and reimporting
-the app module — that's how we exercise the bearer-token branch without
-poisoning sibling tests.
+needed. Each test isolates env state by reloading the app module under
+the desired env vars. The `with TestClient(app)` context manager
+ensures the lifespan handler runs so `app.state.mode` is initialized.
 """
 
 from __future__ import annotations
 
 import importlib
 import os
+from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 
 
-def _fresh_client(env: dict[str, str] | None = None) -> TestClient:
-    """Reload the app module under a fresh env so auth state is clean."""
-    for key in ("ML_SERVICE_TOKEN", "ML_ALLOWED_ORIGINS"):
+def _build_app(env: dict[str, str] | None = None):
+    """Reload the app module under a fresh env."""
+    for key in ("ML_SERVICE_TOKEN", "ML_ALLOWED_ORIGINS", "ML_MODE", "MATCH_PREDICTOR_PATH"):
         os.environ.pop(key, None)
     if env:
         os.environ.update(env)
     import app.main as main_module
 
     importlib.reload(main_module)
-    return TestClient(main_module.app)
+    return main_module.app
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return _fresh_client()
+def client() -> Iterator[TestClient]:
+    app = _build_app()
+    with TestClient(app) as c:
+        yield c
 
 
 SAMPLE_BODY = {
@@ -88,38 +91,70 @@ def test_predict_match_validates_missing_fields(client: TestClient) -> None:
 
 
 def test_bearer_token_enforced_when_configured() -> None:
-    secured = _fresh_client(env={"ML_SERVICE_TOKEN": "s3cret"})
+    app = _build_app(env={"ML_SERVICE_TOKEN": "s3cret"})
+    with TestClient(app) as secured:
+        # /health is intentionally unauth — still 200.
+        assert secured.get("/health").status_code == 200
 
-    # /health is intentionally unauth — still 200.
-    assert secured.get("/health").status_code == 200
+        # No header -> 401.
+        assert secured.post("/predict-match", json=SAMPLE_BODY).status_code == 401
 
-    # No header → 401.
-    assert secured.post("/predict-match", json=SAMPLE_BODY).status_code == 401
+        # Wrong scheme -> 401.
+        assert (
+            secured.post(
+                "/predict-match",
+                json=SAMPLE_BODY,
+                headers={"Authorization": "Token s3cret"},
+            ).status_code
+            == 401
+        )
 
-    # Wrong scheme → 401.
-    assert (
-        secured.post(
+        # Wrong token -> 401.
+        assert (
+            secured.post(
+                "/predict-match",
+                json=SAMPLE_BODY,
+                headers={"Authorization": "Bearer nope"},
+            ).status_code
+            == 401
+        )
+
+        # Correct token -> 200.
+        res = secured.post(
             "/predict-match",
             json=SAMPLE_BODY,
-            headers={"Authorization": "Token s3cret"},
-        ).status_code
-        == 401
-    )
+            headers={"Authorization": "Bearer s3cret"},
+        )
+        assert res.status_code == 200
 
-    # Wrong token → 401.
-    assert (
-        secured.post(
-            "/predict-match",
-            json=SAMPLE_BODY,
-            headers={"Authorization": "Bearer nope"},
-        ).status_code
-        == 401
-    )
 
-    # Correct token → 200.
-    res = secured.post(
-        "/predict-match",
-        json=SAMPLE_BODY,
-        headers={"Authorization": "Bearer s3cret"},
-    )
-    assert res.status_code == 200
+def test_trained_mode_uses_model_when_artefact_present(tmp_path) -> None:
+    """When `ML_MODE=trained` and the artefact loads, /health reports trained mode."""
+    from pathlib import Path as _Path
+
+    src = _Path(__file__).resolve().parent.parent / "trained_models" / "match_predictor.pkl"
+    if not src.exists():
+        pytest.skip(
+            "No trained model on disk; run `python train.py` to generate one then re-run."
+        )
+
+    app = _build_app(env={"ML_MODE": "trained", "MATCH_PREDICTOR_PATH": str(src)})
+    with TestClient(app) as trained:
+        health = trained.get("/health").json()
+        assert health["mode"] == "trained"
+
+        res = trained.post("/predict-match", json=SAMPLE_BODY)
+        assert res.status_code == 200, res.text
+        body = res.json()
+        assert body["predictedWinner"] in {"home", "draw", "away"}
+        total = body["homeWinProb"] + body["drawProb"] + body["awayWinProb"]
+        assert 99.0 <= total <= 101.0
+
+
+def test_trained_mode_without_artefact_fails_loudly(tmp_path) -> None:
+    """ML_MODE=trained but no model file -> startup raises, no silent fallback."""
+    bogus = tmp_path / "missing.pkl"
+    app = _build_app(env={"ML_MODE": "trained", "MATCH_PREDICTOR_PATH": str(bogus)})
+    with pytest.raises(RuntimeError, match="not found"):
+        with TestClient(app):
+            pass
