@@ -1,11 +1,16 @@
 import { test, expect } from '@playwright/test';
+import { seedAuth } from './helpers/auth';
 
 test.describe('Phase 6 wishlist features', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedAuth(page);
+  });
+
   test('extras hub renders feature cards', async ({ page }) => {
     await page.goto('/intelligence/extras');
     await expect(page.locator('main')).toBeVisible();
-    const cards = page.locator('a[href*="/intelligence/extras/"]');
-    expect(await cards.count()).toBeGreaterThan(0);
+    const cards = page.locator('main a[href^="/intelligence/extras/"]');
+    await expect(cards.first()).toBeVisible();
   });
 
   test('tournament simulator renders', async ({ page }) => {
