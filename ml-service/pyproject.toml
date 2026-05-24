@@ -27,6 +27,26 @@ dev = [
     "pytest-asyncio>=0.24,<1",
     "ruff>=0.7,<1",
 ]
+# `train` is opt-in so the Railway runtime image stays slim. The trained
+# model itself is loaded via joblib at runtime (which is in the base
+# install), but fitting it requires the heavy stack below.
+train = [
+    "numpy>=1.26,<3",
+    "pandas>=2.2,<3",
+    "scikit-learn>=1.5,<2",
+    "xgboost>=2.1,<4",
+    "joblib>=1.4,<2",
+    "requests>=2.32,<3",
+]
+# Runtime needs joblib to deserialize the pickle. Pulled into base
+# rather than `train` so Railway can load the model without the rest.
+runtime-model = [
+    "joblib>=1.4,<2",
+    "numpy>=1.26,<3",
+    "pandas>=2.2,<3",
+    "scikit-learn>=1.5,<2",
+    "xgboost>=2.1,<4",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
