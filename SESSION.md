@@ -25,6 +25,46 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 13 — 2026-05-24 (v0.7.0 release, direction set: Phase 3 ML service)
+
+**Goal:** Cut the v0.7.0 release tag now that the demo-mode build hits the full Phase 7 quality bar (typecheck ✓, 40/40 E2E ✓, Lighthouse ≥ 90 ✓, green deploy ✓). Decide on the next direction.
+
+**Built (3 atomic commits + a tag):**
+
+*v0.7.0 release*
+- `CHANGELOG.md` — rolled the Unreleased section into `[0.7.0]` with everything from Sessions 7-12: skeletons, shared hooks layer, utility helpers, architecture/deployment/demo-data docs, OSS hygiene files, Playwright suite (10 specs, `seedAuth` helper), JSDoc sweep, the Lighthouse-driven dynamic-import optimizations, and the two fixed-in-flight RSC bugs (`/offline` missing `"use client"`, `/leagues` calling `useIsClient()` from a server component).
+- `futology/package.json` — version bumped `0.1.0` → `0.7.0` (had stayed at 0.1.0 since scaffold).
+- `git tag -a v0.7.0` — annotated tag pointing at the release commit on `main`.
+
+*CI hardening*
+- `.github/workflows/deploy.yml` — added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` at workflow scope to opt into Node 24 ahead of the September 2026 Node 20 sunset on GitHub Actions runners. Silences the deprecation warning we've been seeing on every run.
+
+**Direction set for Session 14+:**
+- **Picked: Phase 3 — FastAPI ML service** (per `AskUserQuestion`).
+- Scope per bible §3 / §9: Python service hosting an XGBoost match predictor, SHAP-style transfer-value factors, sentiment pipeline. Decoupled from the front-end; the front-end calls it via `/api/ml/predict-match` (today's `lib/ml/predictor.ts` already returns the exact bible §9.1 envelope, so the swap is one fetch).
+- Deferred (for now): Supabase + Vercel real-services cutover. Demo persistence (Zustand + localStorage) stays the way users experience predictions until that future cutover.
+- Hosting target: Railway ($5 credit per bible §7 / §11). Repo can live alongside the front-end or in a sibling `ml-service/` folder — to decide next session.
+
+**Verified:**
+- `npx tsc --noEmit` ✓ clean.
+- `npx playwright test` ✓ 40/40 from Session 12 still green.
+- GitHub Pages auto-deploy from `01dbb06` still serving (no code change here that would re-trigger or break it).
+
+**Phase 7 Progress:**
+- ✅ **Phase 7 closed for demo mode** — every checklist item except the deferred Vercel cutover is done.
+- ✅ v0.7.0 tag cut.
+- ⏳ Vercel + Supabase cutover — deferred behind Phase 3.
+- ▶️ Phase 3 starts next session.
+
+**Next session starts here:**
+1. Decide layout: `ml-service/` sibling folder vs separate repo. The bible suggests separate; sibling is simpler for atomic commits.
+2. Scaffold the FastAPI app — `pyproject.toml` (uv or poetry), `app/main.py` with `/health` and `/predict-match`, `Dockerfile` for Railway deploy.
+3. Drop in a stub predictor that returns the same envelope as `lib/ml/predictor.ts` so the front-end can switch hosts via env var without code change.
+4. Wire `MATCH_PREDICT_URL` and `ML_SERVICE_TOKEN` into `app/intelligence/match/MatchPredictorView.tsx` (currently calls `predictMatch()` directly per Session 5's static-export refactor).
+5. Real XGBoost training is downstream — start with the stub + deploy + auth so the rest is incremental.
+
+---
+
 ### Session 12 — 2026-05-24 (Lighthouse ≥ 90 across the board, deploy resurrected)
 
 **Goal:** Run the Lighthouse audit from Session 11's punch list. Hit ≥ 90 on all four categories.
