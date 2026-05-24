@@ -1,5 +1,8 @@
-# Railway-compatible image. Python 3.11 slim keeps the cold-start small
-# until v0.2 introduces XGBoost / scikit-learn / pandas (~150-200 MB extra).
+# Railway-compatible image. Python 3.11 slim plus the runtime-model
+# extra so the deployed service can load a trained pickle if one is
+# baked in or mounted. The `train` extra (xgboost-build-time-only) is
+# not installed in the runtime image; train locally and either commit
+# trained_models/ or upload via Railway's filesystem.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -11,9 +14,12 @@ WORKDIR /app
 
 # Install runtime deps first so the layer caches across code-only edits.
 COPY pyproject.toml README.md ./
-RUN pip install --upgrade pip && pip install .
+RUN pip install --upgrade pip && pip install ".[runtime-model]"
 
 COPY app ./app
+# Optional — copy the trained pickle into the image if present. The
+# Dockerfile copy is safe even when `trained_models/` is empty.
+COPY trained_models ./trained_models
 
 # Railway injects $PORT at runtime. Default to 8080 for local `docker run`.
 ENV PORT=8080
