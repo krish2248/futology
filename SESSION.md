@@ -25,6 +25,53 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 21 — 2026-05-24 (front-end wiring — every ML endpoint Railway-ready)
+
+**Goal:** Replicate the `predictMatchAuto` pattern across the four other ML endpoints so the front-end is one env-var away from calling Railway for every Intelligence feature. Session 20 finished the back-end; this session finishes the cutover plumbing.
+
+**Built (7 atomic commits):**
+
+*Four `Auto`-router client modules — all under `futology/lib/ml/`*
+- `cluster.ts` — `predictPlayerClusterAuto(player)` POSTs to `/predict-player-cluster` when `NEXT_PUBLIC_ML_API_URL` is set, otherwise wraps the seeded `PlayerStatLine.cluster` from the demo data and rescales the seeded `(creativity, defensiveActivity)` axes into the same PCA range the FastAPI service emits. Same `ClusterId` set on both sides.
+- `transferClient.ts` — `predictTransferValueAuto(player)` calls `/predict-transfer-value` or falls back to the local `predictTransferValue` stub. Maps the front-end's `PlayerStatLine` to the FastAPI service's request schema (`xGPer90`, `xAPer90`, `leagueLevel` derived heuristically from the team name) and reshapes the remote response back into `TransferValuation` — comparable-players list is sourced from the local nearest-neighbour helper since the remote service doesn't ship that yet.
+- `sentimentClient.ts` — `analyzeSentimentAuto(match)` calls `/sentiment-analyze` or falls back to `getDemoSentiment(match)`. Reshapes the remote response into the existing `SentimentSnapshot` so consumers (timeline, gauges, live-feed) don't change.
+- `fantasyClient.ts` — `optimizeFantasyAuto(pool, constraints)` ships the candidate pool + constraints to `/fantasy-optimize` or falls back to the greedy `optimizeFantasy`. Returns the same `OptimizedSquad | null` shape so the UI doesn't change. Joins on player `id` to hydrate ownership / form / injury fields the back-end doesn't carry.
+
+*Three views switched from `useMemo(syncStub, …)` to `useEffect(asyncRouter, …)`*
+- `TransferOracleView` — `useEffect` runs `predictTransferValueAuto`; cancellation token prevents stale set-state when the user switches players mid-fetch.
+- `SentimentStormView` — same pattern for `analyzeSentimentAuto`.
+- `FantasyIQView` — same pattern for `optimizeFantasyAuto`; budget / formation / risk changes refetch.
+- `PlayerPulseView` — left alone. Its cluster scatter renders from pre-seeded data; the `predictPlayerClusterAuto` client is in place for the post-Phase-2 swap when players carry custom uploaded stats.
+
+**Verified:**
+- `npx tsc --noEmit` ✓ clean.
+- `npx playwright test` ✓ **40/40** in 47.9s — no regressions from the sync→async refactor.
+
+**Phase 3 Progress:**
+- ✅ **Front-end Railway-ready** — every Intelligence feature reaches the FastAPI service when `NEXT_PUBLIC_ML_API_URL` is set, falls back cleanly otherwise.
+- ✅ All four `Auto` routers follow the same code shape: read URL, branch to fallback or fetch, reshape on the way back.
+- ⏳ Railway deploy still on Sonik. Once the URL exists, set it as a GitHub Actions repo secret and expose via `env:` in `.github/workflows/deploy.yml`.
+- ⏳ Real-data swaps for sentiment (Reddit+RoBERTa) and transfer (FBref) remain — both leave the API contract intact.
+
+**Completion estimate refresh:**
+
+| Cut | Sessions left | Why |
+|---|---|---|
+| **A — demo-complete + ML live on Railway** | **~0.5 session** | Just the Railway click-through + GH Actions secrets wiring (mostly user action) |
+| **B — full bible-spec, real services everywhere** | **~3-5 sessions** | Phase 2 cutover (Supabase + RapidAPI proxies, 3) + email digest + real-data swaps (1-2) |
+
+**~95% of the bible done.** Front-end + back-end + wiring are all complete in synthetic mode; everything that's left is plumbing to real external services.
+
+**Next session starts here:**
+1. **Railway deploy** (still your action) — `mkdir`-free since everything's committed.
+2. Once Railway gives you a URL, drop these into the repo:
+   - GitHub Actions secrets: `NEXT_PUBLIC_ML_API_URL`, `NEXT_PUBLIC_ML_API_TOKEN`.
+   - `.github/workflows/deploy.yml` exposes them under `env:` in the build step.
+   - Push, watch the deploy, confirm the live `/intelligence/transfer`, `/intelligence/sentiment`, `/intelligence/fantasy`, `/intelligence/match` all call Railway.
+3. Phase 2 Supabase cutover scoping — start with auth (`signIn` → `supabase.auth.signInWithOtp`) on a separate Vercel target so the GH Pages demo stays open.
+
+---
+
 ### Session 20 — 2026-05-24 (Phase 3 v0.6 — sentiment §9.3 + fantasy §9.5, full)
 
 **Goal:** Finish Phase 3's ML surface — both v0.6a (sentiment per bible §9.3) and v0.6b (PuLP fantasy optimizer per bible §9.5), neither cut short. Sonik asked for no shortcuts.
