@@ -25,6 +25,58 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 14 — 2026-05-24 (Phase 3 begins — FastAPI scaffold + stub predictor)
+
+**Goal:** Kick off Phase 3 (FastAPI ML service per bible §3/§9). Scaffold the Python service, drop in a deterministic stub for `/predict-match` that matches the front-end's shape exactly, and verify it boots locally.
+
+**Decision recorded at start of session:**
+- ML service lives at `ml-service/` (sibling folder under `Sick-Boy/`), not a separate repo. Atomic cross-stack commits + single git history beat the bible's "separate repo" suggestion for a solo project.
+
+**Built (7 atomic commits):**
+
+*Project scaffold — `ml-service/`*
+- `pyproject.toml` — hatchling build, Python ≥ 3.11, FastAPI + uvicorn + pydantic stub deps. XGBoost / scikit-learn / pandas / SHAP defer to v0.2 so Railway cold-starts stay fast.
+- `.python-version`, `.gitignore` (Python + venv + `*.pkl` artefacts), `.env.example`, `app/__init__.py`.
+
+*Wire formats — `app/schemas.py`*
+- Pydantic v2 models with `alias_generator=to_camel` so the JSON is camelCase (matches `futology/lib/ml/predictor.ts` exactly) while Python stays snake_case. `PredictMatchRequest`, `PredictMatchResponse`, `HealthResponse`.
+
+*Auth — `app/auth.py`*
+- `require_bearer` dependency reads `ML_SERVICE_TOKEN`. When unset (local dev), auth is bypassed for friction-free curl/uvicorn iteration. When set on Railway, every protected route 401s without a matching `Authorization: Bearer …` header.
+
+*Stub predictor — `app/predictors/match_stub.py`*
+- Reimplements the Lehmer RNG + factor templates from `futology/lib/ml/predictor.ts` line-for-line in Python. Same `(home_id, away_id, competition_id)` triple → byte-identical probabilities / score / factors on both sides. That's the cutover guarantee: when v0.2 swaps the stub for `XGBClassifier`, users won't see prediction churn from the migration itself.
+
+*FastAPI entry — `app/main.py`*
+- App created at module scope, CORS allow-listed for localhost dev + `https://krish2248.github.io`, two routes: `GET /health` (unauth, returns version + mode), `POST /predict-match` (bearer-gated).
+
+*Deploy — `Dockerfile`*
+- `python:3.11-slim`, layered install (pyproject first → app code second) so code-only edits don't bust the dependency layer. `$PORT` honoured for Railway, falls back to 8080 for local `docker run`.
+
+*Docs — `README.md` + `.env.example`*
+- Quick-start for Windows PowerShell, API table, deploy notes, roadmap from v0.2 (XGBoost match) through v0.6 (PuLP fantasy).
+
+**Verified:**
+- Fresh `.venv` via `py -3.11 -m venv`, `pip install -e ".[dev]"` ✓ (fastapi 0.136.3, uvicorn 0.47.0, pydantic 2.13.4).
+- `uvicorn app.main:app --port 8765` → boots clean.
+- `GET /health` → `{"status":"ok","version":"0.1.0","mode":"stub"}` ✓.
+- `POST /predict-match {homeId:541,awayId:529,competitionId:140,...}` → `{"homeWinProb":42.0,"drawProb":15.0,"awayWinProb":43.0,"predictedWinner":"away","confidence":43.0,"predictedScore":"3-4","keyFactors":[…3 strings…]}` ✓.
+- Same payload twice → byte-identical output → **deterministic stub confirmed**.
+
+**Phase 3 Progress:**
+- ✅ ml-service scaffold + stub predictor + auth + Dockerfile in place.
+- ⏳ Front-end cutover — `MatchPredictorView.tsx` still calls `predictMatch()` locally. Swap to `fetch(MATCH_PREDICT_URL)` is one diff away.
+- ⏳ Railway deploy — needs Sonik to create a project and paste `ML_SERVICE_TOKEN`. Bible §7 / §11.
+- ⏳ v0.2 — replace stub with trained `XGBClassifier` on football-data.co.uk CSVs (bible §9.1).
+
+**Next session starts here:**
+1. Wire the front-end: add `NEXT_PUBLIC_ML_API_URL` + `ML_SERVICE_TOKEN` to `.env.example`; have `MatchPredictorView.tsx` call the service when the URL is set, fall back to the local stub when not (so the GH Pages demo still works).
+2. Deploy the service to Railway — create project, point at the `ml-service/` Dockerfile, set the two env vars. Cap the free tier at `$5` so a runaway doesn't surprise us.
+3. Add a small `tests/test_main.py` (pytest + httpx) covering `/health`, `/predict-match` happy path, 401 with token enforced, request validation.
+4. Once the live service is up, start v0.2 — download football-data.co.uk CSVs, write `ml-service/train.py` to fit the `XGBClassifier` from bible §9.1 (`n_estimators=300, max_depth=6, …`), pickle the model, load on FastAPI startup, swap `match_stub.predict_match` for the real predictor behind a `ML_MODE=trained` env flag.
+
+---
+
 ### Session 13 — 2026-05-24 (v0.7.0 release, direction set: Phase 3 ML service)
 
 **Goal:** Cut the v0.7.0 release tag now that the demo-mode build hits the full Phase 7 quality bar (typecheck ✓, 40/40 E2E ✓, Lighthouse ≥ 90 ✓, green deploy ✓). Decide on the next direction.
