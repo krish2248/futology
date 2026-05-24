@@ -28,6 +28,8 @@ from app.schemas import (
     PlayerClusterResponse,
     PredictMatchRequest,
     PredictMatchResponse,
+    TransferValueRequest,
+    TransferValueResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,6 +68,7 @@ async def lifespan(app: FastAPI):
     app.state.mode = _resolve_mode()
     app.state.trained = None
     app.state.clusterer = None
+    app.state.transfer = None
     if app.state.mode == "trained":
         match_path = Path(
             os.environ.get("MATCH_PREDICTOR_PATH", "trained_models/match_predictor.pkl")
@@ -108,6 +111,28 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 "Player clusterer artefact not found at %s — /predict-player-cluster will 503.",
                 cluster_path,
+            )
+
+        transfer_path = Path(
+            os.environ.get("TRANSFER_VALUE_PATH", "trained_models/transfer_value.pkl")
+        )
+        if not transfer_path.is_absolute():
+            transfer_path = Path(__file__).resolve().parent.parent / transfer_path
+        if transfer_path.exists():
+            from app.predictors.transfer_value import TrainedTransferRegressor
+
+            app.state.transfer = TrainedTransferRegressor.load(transfer_path)
+            logger.info(
+                "Loaded trained transfer regressor: MAE=EUR %.0f, coverage=%.1f%%, n_train=%d",
+                app.state.transfer.test_mae_eur,
+                app.state.transfer.band_coverage * 100,
+                app.state.transfer.n_train,
+            )
+        else:
+            app.state.transfer = None
+            logger.warning(
+                "Transfer regressor artefact not found at %s — /predict-transfer-value will 503.",
+                transfer_path,
             )
     yield
 
@@ -178,3 +203,30 @@ def predict_player_cluster_route(
             ),
         )
     return app.state.clusterer.predict(req)
+
+
+@app.post(
+    "/predict-transfer-value",
+    response_model=TransferValueResponse,
+    tags=["players"],
+)
+def predict_transfer_value_route(
+    req: TransferValueRequest, _: RequireBearer
+) -> TransferValueResponse:
+    """Per-player features -> market value EUR + [p10, p90] band + SHAP (bible §9.4).
+
+    503 in stub mode. Run `python train_transfer.py` then reboot with
+    `ML_MODE=trained`. Comparable-players list lands in v0.6 once a
+    real player universe is wired in.
+    """
+    from fastapi import HTTPException, status
+
+    if app.state.transfer is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Transfer regressor not loaded. Set ML_MODE=trained and ensure "
+                "trained_models/transfer_value.pkl exists."
+            ),
+        )
+    return app.state.transfer.predict(req)
