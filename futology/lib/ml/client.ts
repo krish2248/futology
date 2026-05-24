@@ -1,3 +1,4 @@
+import { findLeague } from "@/lib/data/leagues";
 import { predictMatch as predictMatchLocal } from "./predictor";
 import type {
   MatchPredictionInputs,
@@ -32,6 +33,7 @@ export async function predictMatchAuto(
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
 
+  const league = findLeague(inputs.home.leagueId);
   const res = await fetch(url, {
     method: "POST",
     headers,
@@ -41,6 +43,8 @@ export async function predictMatchAuto(
       competitionId: inputs.competitionId ?? inputs.home.leagueId,
       homeShortName: inputs.home.shortName,
       awayShortName: inputs.away.shortName,
+      leagueShortName: league?.shortName,
+      leagueTier: league?.tier,
     }),
   });
 

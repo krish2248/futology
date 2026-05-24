@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 Winner = Literal["home", "draw", "away"]
+LeagueTier = Literal["elite", "major", "rising"]
 
 
 class CamelModel(BaseModel):
@@ -43,6 +44,10 @@ class PredictMatchRequest(CamelModel):
     league_short_name: str | None = Field(
         default=None,
         description="Optional league short name used in key-factor templates.",
+    )
+    league_tier: LeagueTier | None = Field(
+        default=None,
+        description="Drives the tier-bonus modulation in the stub predictor; ignored by the trained model.",
     )
 
 

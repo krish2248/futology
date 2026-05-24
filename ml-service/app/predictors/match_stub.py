@@ -56,7 +56,8 @@ def predict_match(req: PredictMatchRequest) -> PredictMatchResponse:
     seed = req.home_id * 1_000_003 + req.away_id * 17 + competition_id
     rnd = _seeded(seed)
 
-    base_home = 35 + math.floor(rnd() * 28)
+    tier_boost = 4 if req.league_tier == "elite" else 2 if req.league_tier == "major" else 0
+    base_home = 35 + tier_boost + math.floor(rnd() * 28)
     base_away = 22 + math.floor(rnd() * 26)
     base_draw = max(8, 100 - base_home - base_away)
     total = base_home + base_away + base_draw
