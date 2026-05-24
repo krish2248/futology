@@ -25,6 +25,62 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 16 — 2026-05-24 (v0.2 ML — parity test, real XGBoost, trained route)
+
+**Goal:** Burn down Session 15's "Next session starts here" items #2 (kick off v0.2 — real XGBoost training) and #3 (TS/Python parity test). Item #1 (Railway env wiring) stays parked until Sonik finishes the Railway deploy from Session 15.
+
+**Built (7 atomic commits):**
+
+*Stub parity (#3 — the contract guard)*
+- Spotted a silent divergence between `futology/lib/ml/predictor.ts` and `ml-service/app/predictors/match_stub.py`: TS applied a `tierBoost` (elite/major/rising → 4/2/0) to `baseHome`; Python didn't.
+- `app/schemas.py` — added optional `leagueTier: "elite" | "major" | "rising"` to `PredictMatchRequest`.
+- `app/predictors/match_stub.py` — ported the tier boost.
+- `futology/lib/ml/client.ts` — looks up the home club's league via `findLeague(...)` and sends both `leagueShortName` and `leagueTier`.
+- `futology/scripts/generate_predictor_fixture.ts` — new tsx script that runs the TS predictor against a fixed matrix of 9 club pairs (every elite-league derby + Eredivisie + Primeira + two reverse-order cases) and writes `ml-service/tests/fixtures/match_parity.json`.
+- `ml-service/tests/test_parity.py` — parametrized pytest that feeds each fixture case through `match_stub` and asserts byte-identical output. Re-run after any intentional change to the TS predictor.
+
+*v0.2 — real XGBoost training (#2)*
+- `ml-service/pyproject.toml` — new `[train]` extra (xgboost/sklearn/pandas/numpy/joblib/requests) and `[runtime-model]` for the deployed image (no xgboost build chain, just inference).
+- `ml-service/scripts/download_football_data.py` — pulls 30 CSVs from football-data.co.uk (EPL/La Liga/Serie A/Bundesliga/Ligue 1 × seasons 2019-20 → 2024-25, ~5 MB total). Idempotent.
+- `ml-service/train.py` — full bible §9.1 pipeline in one file (~330 LoC):
+  - Loads all CSVs, normalises columns, drops abandoned/postponed.
+  - Walks matches in date order; per team maintains last-5 form deques + per-pair last-10 H2H + 400-point ELO with K=24, home-adv=60.
+  - 22 pre-match features per row: form W/D/L, goals for/against avg, shots avg, shots-on-target avg, clean sheets, days-rest, ELO diff, H2H home/away/draw counts.
+  - Temporal split — last 20% of matches by date held out.
+  - `XGBClassifier(n_estimators=300, max_depth=6, lr=0.05, subsample=0.8, colsample_bytree=0.8)` with median-balanced sample weights, then `CalibratedClassifierCV(FrozenEstimator(base), method="isotonic", cv=5)` (sklearn 1.6 removed `cv="prefit"` — `FrozenEstimator` is the replacement).
+  - Pickles `{model, feature_columns, classes, test_accuracy, n_train, …}` to `trained_models/match_predictor.pkl`.
+- **First real run** — **10,707 matches**, holdout **48.8% accuracy / 4.785 log-loss**. Baseline 33% (uniform 3-class); home-win class baseline ~42%. 3.2 MB pickle.
+- `ml-service/app/predictors/match_trained.py` — wraps the artefact with the same `predict_match(req)` signature as the stub. Feeds neutral midtable inputs for unknown clubs (Phase 6 / Supabase will provide real club form). Derives plain-English factors from class probabilities; SHAP factor mapping is a v0.3 follow-up.
+
+*Route + lifespan wiring*
+- `ml-service/app/main.py` — added an `asynccontextmanager`-based `lifespan` that reads `ML_MODE`; when `"trained"`, loads the pickle (or crashes loudly if missing, no silent fallback). `/health` now reports the actual mode (`"stub"` or `"trained"`). `/predict-match` routes to `app.state.trained.predict(req)` or the stub.
+- `ml-service/Dockerfile` — installs `.[runtime-model]` so the deployed image can serve trained mode; copies `trained_models/` (now seeded with a `.gitkeep` so Docker build doesn't fail on a fresh clone).
+- `ml-service/.gitignore` — exempts `trained_models/.gitkeep`; ignores `data/raw/` (regeneratable via the downloader).
+
+**Verified:**
+- `pytest -v` ✓ **16/16** in 3.29 s (5 main + 9 parity + 2 trained-mode coverage).
+- `npx tsc --noEmit` ✓ clean front-end.
+- Live boot in trained mode: `uvicorn ... --port 8766` with `ML_MODE=trained` →
+  - `/health` returns `{"status":"ok","mode":"trained","version":"0.1.0"}`.
+  - `POST /predict-match {homeId:541, awayId:529, ...}` returns probabilities from the calibrated XGBoost (`homeWinProb: 18.2, drawProb: 23.93, awayWinProb: 57.87, predictedWinner: "away"`).
+
+**Phase 3 Progress:**
+- ✅ v0.2 — XGBoost trainer + trained route wired behind `ML_MODE=trained`.
+- ✅ Parity test guards against silent stub drift between TS and Python.
+- ✅ Service exposes both modes cleanly; `/health` always reports the truth.
+- ⏳ Railway deploy still blocked on Sonik (carried over from Session 15).
+- ⏳ Trained model uses neutral midtable inputs for form features (no per-club form yet) — predictions are league-aware but not team-specific. Solving this is Supabase cutover work (need a `match_form_snapshots` table) or pulling from API-Football fixtures.
+- ⏳ Key factors are heuristic strings — SHAP integration is v0.3.
+
+**Next session starts here:**
+1. **Railway deploy** (still blocked on user; walkthrough is in Session 15 entry above).
+2. Once Railway is up, set `NEXT_PUBLIC_ML_API_URL` / `NEXT_PUBLIC_ML_API_TOKEN` as GitHub Actions secrets, expose them in `.github/workflows/deploy.yml`, redeploy GH Pages, verify the live Match Predictor calls the trained service.
+3. v0.3 — SHAP integration. `TreeExplainer` on the inner XGBoost (peel through `FrozenEstimator` and `CalibratedClassifierCV` to get the base estimator), produce top-3 features per prediction, map each to a plain-English string via a template dict (similar to `_factor_pool` in the stub).
+4. v0.3 polish — pull per-club form into the trained predictor. Cheapest path: add a `recent_form` cache that's populated from API-Football fixtures (Phase 2 work) and surfaced via a small `/api/football/team-form` endpoint. Until then, the predictions assume neutral inputs and the only signal is the league-tier prior.
+5. Consider committing `trained_models/match_predictor.pkl` directly (3.2 MB, well under GitHub's 100 MB soft limit) so Docker builds on Railway don't need to retrain. Trade-off: ~3 MB per re-trained release in repo size.
+
+---
+
 ### Session 15 — 2026-05-24 (front-end wiring + pytest suite for ML)
 
 **Goal:** Burn down Session 14's "Next session starts here" items #1 and #3 — wire the front-end's Match Predictor to the new FastAPI service with a clean fallback to the local stub, and lay down a pytest suite for the ML service. Item #2 (Railway deploy) is flagged as a user action below; can't do that from here.
