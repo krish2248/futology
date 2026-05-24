@@ -25,6 +25,49 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 10 — 2026-05-24 (hook migrations, Playwright green-suite, leagues bug fix)
+
+**Goal:** Burn down Session 9's "Next session starts here" punch list — migrate the five components flagged in task #1 onto the shared hooks, then actually run the full Playwright suite locally and stabilise any flakes.
+
+**Built (8 atomic commits):**
+
+*Hook migrations — five components onto `useDebounce` / `useClickOutside` / `useEscapeKey`*
+- `components/shared/SearchModal.tsx` — `useDebounce(query, 300)` replaces the inline state-pair; `useEscapeKey` handles Esc; the remaining listener now only owns arrow/Enter navigation.
+- `components/layout/NotificationBell.tsx` — `useClickOutside(containerRef, close)` + `useEscapeKey(close, open)`; the manual `window.addEventListener("mousedown" | "keydown")` block is gone.
+- `components/cards/MatchDetailSheet.tsx` — `useEscapeKey(onClose, open)`; the inline `useEffect` that wired the keydown listener is gone.
+- `components/intelligence/TeamPicker.tsx` — same pair as NotificationBell.
+- `components/intelligence/PlayerPicker.tsx` — same pair as NotificationBell.
+
+*Playwright suite stabilised — 40/40 passing*
+- `e2e/helpers/auth.ts` — new `seedAuth(page)` helper that primes `localStorage["futology.session"]` + the `futology_session` cookie via `page.addInitScript`, so AuthGate sees a hydrated demo user and doesn't redirect protected-route tests to `/login`.
+- `e2e/browse.spec.ts` — `beforeEach(seedAuth)`; detail-link assertions now use `expect(locator.first()).toBeVisible()` so they wait through the post-hydration re-render instead of snapshotting the skeleton.
+- `e2e/profile.spec.ts` — same pattern.
+- `e2e/smoke.spec.ts` — seed auth; navigate by `href` (the nav label is "Predict", not "Predictions"); case-insensitive title regex (`/futology/i`); first-match locator on the hero `h1`.
+- `e2e/auth.spec.ts` — dropped the `main, body` fallback locator that was hitting a strict-mode violation; uses `main` alone.
+
+*Pre-existing bug exposed by the suite*
+- `app/leagues/page.tsx` was calling `useIsClient()` from a server component (no `"use client"` directive) while also exporting `metadata`. Production build tolerated it, but dev runtime hit the ErrorBoundary, and the suite caught it. Split into `app/leagues/LeaguesView.tsx` (`"use client"`, owns the hook) + a thin server-component wrapper that keeps the `metadata` export — matching the `/clubs` pattern.
+
+**Verified:**
+- `npx tsc --noEmit` ✓ clean.
+- `npx playwright test` ✓ **40 passed in 30s** (was 34 passed / 6 failed at the start of the session).
+
+**Phase 7 Progress (continued):**
+- ✅ Shared hooks are now used everywhere they were planned to land — no more duplicated click-outside / escape / debounce listeners.
+- ✅ Playwright suite is green locally end-to-end. Auth seeding via `seedAuth` is the entry point for any future protected-route spec.
+- ✅ One real runtime bug (`/leagues` ErrorBoundary in dev) found and fixed off the back of the suite.
+- ⏳ Lighthouse audit ≥ 90 still outstanding.
+- ⏳ Vercel + Supabase cutover still outstanding.
+
+**Next session starts here:**
+1. Apply `seedAuth` to the remaining protected-route specs (`homepage`, `intelligence`, `navigation`, `predictions`, `scores`, `extras`) — they currently pass *incidentally* on `/login`, not against the real pages.
+2. Audit the rest of the App Router for the same RSC-uses-client-hook smell that bit `/leagues` (`grep -l useIsClient app/**/page.tsx` then check for missing `"use client"`).
+3. Lighthouse audit on the live GH Pages URL — target ≥ 90 across all four scores. (Issue #2 / #3)
+4. Decide: Supabase + Vercel cutover (real-services migration) vs. Phase 3 (FastAPI ML service).
+5. Cut a `v0.7.0` release tag once the next batch of Phase 7 work lands.
+
+---
+
 ### Session 9 — 2026-05-10 (utility helpers, hooks, deeper docs, full JSDoc coverage)
 
 **Goal:** Continue Session 8 — broaden the utility/hooks layer, add architecture and deployment docs, finish JSDoc coverage of every demo data module and every interactive component.
