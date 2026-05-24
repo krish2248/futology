@@ -147,3 +147,112 @@ class TransferValueResponse(CamelModel):
     low_estimate: int = Field(..., ge=0, description="10th percentile of the trained quantile model.")
     high_estimate: int = Field(..., ge=0, description="90th percentile of the trained quantile model.")
     shap_factors: list[TransferFactor] = Field(..., max_length=8)
+
+
+# --- Sentiment (bible §9.3) ------------------------------------------------
+
+Emotion = Literal["celebrating", "frustrated", "anxious", "shocked", "neutral"]
+Side = Literal["home", "away", "neutral"]
+SocialSource = Literal["reddit", "twitter", "synthetic"]
+
+
+class SentimentRequest(CamelModel):
+    """Per-fixture context the analyzer needs to produce a snapshot.
+
+    All fields except home/away names + fixture_id default to neutral.
+    The seeded synthetic generator uses fixture_id as the RNG seed so
+    the same fixture always emits the same snapshot — useful in demos
+    and in CI.
+    """
+
+    fixture_id: int
+    home_team: str
+    away_team: str
+    minute: int = Field(default=90, ge=0, le=130)
+    home_score: int = Field(default=0, ge=0)
+    away_score: int = Field(default=0, ge=0)
+    league_short_name: str | None = None
+    n_reactions: int = Field(default=8, ge=0, le=40)
+
+
+class SentimentPoint(CamelModel):
+    minute: int
+    home: float = Field(..., ge=-1.0, le=1.0)
+    away: float = Field(..., ge=-1.0, le=1.0)
+
+
+class SentimentReaction(CamelModel):
+    id: str
+    minute: int
+    side: Side
+    emotion: Emotion
+    text: str
+    source: SocialSource
+
+
+class SentimentResponse(CamelModel):
+    fixture_id: int
+    home_team: str
+    away_team: str
+    home_mood: float = Field(..., ge=-1.0, le=1.0)
+    away_mood: float = Field(..., ge=-1.0, le=1.0)
+    excitement: float = Field(..., ge=0.0, le=1.0)
+    total_posts: int
+    peak_minute: int
+    biggest_swing_minute: int
+    biggest_swing_magnitude: float = Field(..., ge=0.0)
+    biggest_swing_team: Side
+    timeline: list[SentimentPoint]
+    reactions: list[SentimentReaction]
+    source_mode: Literal["synthetic", "reddit"]
+
+
+# --- Fantasy (bible §9.5) --------------------------------------------------
+
+Formation = Literal["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-3-2", "5-4-1"]
+RiskTolerance = Literal["safe", "balanced", "bold"]
+
+
+class FantasyCandidate(CamelModel):
+    """One player in the candidate pool the LP picks from."""
+
+    id: int
+    name: str
+    team: str = Field(..., description="Club short name. Used by the max-3-per-club constraint.")
+    position: Position
+    price: float = Field(..., gt=0, description="Cost in millions (e.g. 12.5).")
+    predicted_points: float = Field(..., ge=0)
+    form: float = Field(default=5.0, ge=0, le=10)
+    injury_risk: float = Field(default=0.0, ge=0, le=1)
+
+
+class FantasyOptimizeRequest(CamelModel):
+    budget: float = Field(default=100.0, gt=0, description="Total squad budget in millions.")
+    formation: Formation = "4-3-3"
+    risk_tolerance: RiskTolerance = "balanced"
+    candidates: list[FantasyCandidate] = Field(..., min_length=15)
+
+
+class FantasySquadPick(CamelModel):
+    id: int
+    name: str
+    team: str
+    position: Position
+    price: float
+    predicted_points: float
+    is_starter: bool
+    is_captain: bool
+
+
+class FantasyOptimizeResponse(CamelModel):
+    formation: Formation
+    budget: float
+    total_cost: float
+    remaining_budget: float
+    predicted_total_points: float
+    squad: list[FantasySquadPick] = Field(..., min_length=15, max_length=15)
+    starting_xi_ids: list[int] = Field(..., min_length=11, max_length=11)
+    bench_order_ids: list[int] = Field(..., min_length=4, max_length=4)
+    captain_id: int
+    differentials: list[FantasySquadPick] = Field(default_factory=list)
+    solver_status: str
