@@ -25,6 +25,80 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 20 — 2026-05-24 (Phase 3 v0.6 — sentiment §9.3 + fantasy §9.5, full)
+
+**Goal:** Finish Phase 3's ML surface — both v0.6a (sentiment per bible §9.3) and v0.6b (PuLP fantasy optimizer per bible §9.5), neither cut short. Sonik asked for no shortcuts.
+
+**Built (6 atomic commits):**
+
+*Deps + schemas*
+- `pyproject.toml` — `pulp>=2.9,<4` added to both `[train]` and `[runtime-model]`. PuLP 3.3.1 installs cleanly on the existing venv.
+- `app/schemas.py` — six new models:
+  - `SentimentRequest` — fixture_id (used as RNG seed), home/away teams, minute, scores, optional league + n_reactions.
+  - `SentimentPoint` — minute + per-side sentiment in [-1, 1].
+  - `SentimentReaction` — id + minute + side + emotion + text + source.
+  - `SentimentResponse` — `homeMood`, `awayMood`, `excitement`, `totalPosts`, `peakMinute`, `biggestSwing{Minute,Magnitude,Team}`, full timeline, reactions, `sourceMode`.
+  - `FantasyCandidate` — id, name, team, position, price, predictedPoints, form, injuryRisk.
+  - `FantasyOptimizeRequest`/`Response` — budget, formation literal, riskTolerance literal, 15-player `squad`, 11-id `startingXiIds`, 4-id `benchOrderIds`, `captainId`, `differentials`, `solverStatus`.
+
+*Sentiment analyzer — `app/predictors/sentiment.py`*
+- Deterministic seeded synthetic timeline (mean-reverting walk + score-event jolts at goal minutes). Same `(fixture_id, minute, score)` triple always emits the same snapshot — useful for demos and for CI.
+- Emotion bucket selector: (side, sentiment) → one of `celebrating / frustrated / anxious / shocked / neutral` per bible §9.3.
+- 24 templated reactions across (side × emotion) combinations, parameterised on team + league names.
+- `_biggest_swing` walks a 3-minute window over the timeline and reports the largest absolute change per side.
+- `totalPosts` synthesised from timeline length + excitement so the post count rises with intensity (matches the bible's "save snapshot every 60s" intuition).
+- Architecture: the future Reddit+RoBERTa swap is documented in the module docstring — replace `_collect_reactions` impl, flip `source_mode` to `"reddit"`. No wire change.
+
+*PuLP fantasy optimizer — `app/predictors/fantasy.py`*
+- Integer linear program: `maximize Σ x_i * adjusted_points_i` subject to all bible §9.5 constraints — budget cap, squad size 15, positional composition (2 GK / 5 DEF / 5 MID / 3 FWD), max 3 per club.
+- Risk-tolerance bias: `safe` discounts injury-risky players (`-2 × injury_risk × points`), `balanced` is neutral, `bold` adds an in-form bonus (`+1.5 × max(0, form - 5)`).
+- After solving, picks the formation's positional split for the starting XI (highest-adjusted at each slot), assigns captain to the highest XI scorer, orders the 4-man bench by adjusted points desc.
+- `differentials` heuristic flags squad members whose predicted points clear the candidate-pool median — proxy for "low-ownership upside" until real ownership data lands.
+- Uses CBC (PuLP bundled), no system solver needed; falls back gracefully on infeasibility with a 422.
+
+*FastAPI routes — `app/main.py`*
+- `POST /sentiment-analyze` — bearer-auth; always available regardless of `ML_MODE`. Synthetic snapshot today, Reddit swap in v0.7.
+- `POST /fantasy-optimize` — bearer-auth; always available. Caller supplies candidate pool (the front-end has it via `lib/data/demoFantasy.ts`).
+
+**Verified:**
+- `pytest -v` ✓ **32/32** in 8.04s.
+- New coverage:
+  - `test_sentiment_analyze_happy_path` — schema-bound output, timeline length = `minute + 1`, exactly `nReactions` reactions, `sourceMode == "synthetic"`.
+  - `test_sentiment_analyze_is_deterministic` — same payload twice → byte-identical response.
+  - `test_sentiment_validates_input` — `minute: 200` → 422.
+  - `test_fantasy_optimize_respects_squad_constraints` — squad of 15 split exactly 2/5/5/3, total cost ≤ budget, max 3 per club, XI matches formation, captain in XI, bench is 4 non-starters disjoint from XI.
+  - `test_fantasy_optimize_max_3_per_club_enforced` — pool dominated by 6 teams still caps each at 3.
+  - `test_fantasy_optimize_insufficient_candidates_422` — pool of 15 GKs (no other positions) → 422 with "Not enough" detail.
+
+**Phase 3 Progress:**
+- ✅ v0.1 stub `/predict-match`.
+- ✅ v0.2 trained XGBoost match predictor (48.8% holdout, 22 features, calibrated).
+- ✅ v0.3 SHAP-derived key factors for matches.
+- ✅ v0.4 player clusterer (KMeans+PCA, 6 named profiles, silhouette 0.386).
+- ✅ v0.5 transfer value regressor (quantile XGBoost, MAE €8.5M, R² 0.791, SHAP in EUR).
+- ✅ **v0.6a sentiment analyzer (seeded synthetic, full bible §9.3 wire shape).**
+- ✅ **v0.6b PuLP fantasy optimizer (full bible §9.5 constraints, real LP solver).**
+- 🎉 **Phase 3 ML surface is feature-complete in synthetic-data mode.** Five trained models, two LP/synthetic predictors, all 32 tests green.
+- ⏳ Real data sources (Reddit for sentiment, FBref/Understat for transfer/cluster features) are the only remaining swaps inside Phase 3 — they replace impl, not API.
+- ⏳ Railway deploy still on Sonik.
+
+**Completion estimate refresh:**
+
+| Cut | Sessions left | Why |
+|---|---|---|
+| **A — demo-complete + ML live on Railway** | **~1 session** | Railway deploy (your action) + GH Actions secrets wiring |
+| **B — full bible-spec, real services everywhere** | **~3-5 sessions** | Phase 2 cutover (Supabase + RapidAPI, ~3) + Resend email digest + Real-data swaps for sentiment/transfer (~1-2) |
+
+**~94% of the bible done.** The headline ML surface is complete; what's left is wiring real external services in place of demo paths.
+
+**Next session starts here:**
+1. **Railway deploy** — still blocked on Sonik.
+2. Phase 2 cutover scoping — Supabase project + schema apply + auth swap (`signIn` → `supabase.auth.signInWithOtp`). The cookie-based AuthGate stays as a shim; the persisted-Zustand follow lists migrate to `user_followed_*` tables. 2-3 sessions total.
+3. Real-data swap for sentiment — `ML_SOCIAL_PROVIDER=reddit` + PRAW + RoBERTa (~500 MB model download). Heavier image; might be worth deploying as a separate Hugging Face Spaces app per bible §3 footnote.
+4. Real-data swap for transfer regressor — pull FBref or Understat per-90 stats for the seeded player set, retrain `transfer_value.pkl`. Same model architecture, just real features.
+
+---
+
 ### Session 19 — 2026-05-24 (Phase 3 v0.5 — transfer value regressor, bible §9.4)
 
 **Goal:** Phase 3 v0.5 — XGBoost regressor on `log(market_value_eur)` with quantile heads for the [p10, p90] band and SHAP explanations in EUR. Front-end's Transfer Oracle page already mocks this shape; the swap is a single fetch when GH Pages reads `NEXT_PUBLIC_ML_API_URL`.
