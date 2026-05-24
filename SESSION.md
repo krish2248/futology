@@ -25,6 +25,55 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 15 — 2026-05-24 (front-end wiring + pytest suite for ML)
+
+**Goal:** Burn down Session 14's "Next session starts here" items #1 and #3 — wire the front-end's Match Predictor to the new FastAPI service with a clean fallback to the local stub, and lay down a pytest suite for the ML service. Item #2 (Railway deploy) is flagged as a user action below; can't do that from here.
+
+**Built (4 atomic commits + the test suite):**
+
+*Front-end → ML service routing*
+- `futology/lib/ml/client.ts` — new `predictMatchAuto(inputs)` async router. Reads `NEXT_PUBLIC_ML_API_URL` at call time; if set, POSTs to `/predict-match`, otherwise wraps the synchronous local `predictMatch` in a Promise. Optional `NEXT_PUBLIC_ML_API_TOKEN` adds a bearer header — exposed in-bundle since static export can't keep secrets; CORS allow-listing on the service side is the real protection until the Vercel cutover lands.
+- `futology/app/intelligence/match/MatchPredictorView.tsx` — swapped the synchronous `predictMatch({...})` plus `setTimeout(220)` for `await predictMatchAuto({...})`. Loading state is now driven by real network time when the service is configured; the local fallback feels just as snappy.
+- `futology/.env.example` — added `NEXT_PUBLIC_ML_API_URL` + `NEXT_PUBLIC_ML_API_TOKEN` with comments explaining the static-export-can't-keep-secrets caveat. Left the existing `ML_SERVICE_URL`/`ML_SERVICE_TOKEN` keys in place for the future Vercel cutover.
+
+*Phase 3 pytest suite*
+- `ml-service/tests/test_main.py` — 5 tests, all green:
+  - `/health` returns ok + version + mode.
+  - `/predict-match` happy path — camelCase keys only, probabilities sum to ~100, predicted winner ∈ {home, draw, away}, key factors 1-5 strings.
+  - `/predict-match` determinism — same payload twice → byte-identical response.
+  - Request validation — missing `awayId` → 422.
+  - Bearer auth — `ML_SERVICE_TOKEN` set ⇒ no header / wrong scheme / wrong value all 401, correct header 200; `/health` stays public.
+- `tests/__init__.py` for package discovery. Helper `_fresh_client(env)` reimports `app.main` so each test gets an isolated auth state without touching sibling tests.
+
+**Verified:**
+- `npx tsc --noEmit` ✓ clean.
+- `pytest -v` ✓ **5/5** in 1.08s.
+- `npx playwright test` ✓ **40/40** in 41.8s — the async refactor didn't break any spec.
+
+**Phase 3 Progress:**
+- ✅ Front-end ↔ FastAPI wiring done with safe fallback.
+- ✅ ML service has a pytest baseline.
+- ⏳ Railway deploy — needs Sonik to log in to Railway and point a project at the `ml-service/` Dockerfile. Once live, set `NEXT_PUBLIC_ML_API_URL=https://<railway-url>` in `futology/.env.local` (or as a GitHub Actions secret if we want the GH Pages demo to use it).
+- ⏳ v0.2 — replace stub with trained `XGBClassifier` per bible §9.1.
+
+**⚠️ User action required (Railway deploy):**
+
+1. Sign in at https://railway.app (GitHub OAuth is easiest).
+2. **New Project → Deploy from GitHub repo → krish2248/futology**. When asked for the build root, set it to `ml-service`. Railway picks up `Dockerfile` automatically.
+3. In **Variables** add:
+   - `ML_SERVICE_TOKEN` — generate with `python -c "import secrets; print(secrets.token_urlsafe(48))"` and save the value somewhere; you'll need it for the front-end env.
+   - `ML_ALLOWED_ORIGINS=https://krish2248.github.io,http://localhost:3000`
+4. **Settings → Usage** → cap the project at **$5/mo** so a runaway can't surprise you.
+5. Once the deploy URL is live, hit `https://<url>/health` to confirm — should return `{"status":"ok",...}`.
+6. Tell future-Claude the URL + token and Session 16 wires them in.
+
+**Next session starts here:**
+1. Once Railway is live, set `NEXT_PUBLIC_ML_API_URL` / `NEXT_PUBLIC_ML_API_TOKEN` for the GH Pages build (GitHub Actions repo secrets → `.github/workflows/deploy.yml` env block), redeploy, and verify the live Match Predictor calls Railway instead of the local stub.
+2. Kick off v0.2 — download football-data.co.uk CSVs (EPL/La Liga/Serie A/Bundesliga/Ligue 1, 2019-20 → 2024-25, ~9k matches), write `ml-service/train.py` to fit the `XGBClassifier` from bible §9.1, pickle to `trained_models/match_predictor.pkl`. Add `MATCH_PREDICTOR_PATH` env to load on FastAPI startup; flip `mode` in `/health` to `"trained"`. Replace `match_stub.predict_match` behind a `ML_MODE=trained` flag so the stub stays as a debug fallback.
+3. Optional polish: add a `tests/test_predictor_parity.py` that asserts the Python stub and the TS stub produce the same output for a hardcoded matrix of `(home_id, away_id, competition_id)` triples — proves the cutover guarantee holds even after both sides evolve.
+
+---
+
 ### Session 14 — 2026-05-24 (Phase 3 begins — FastAPI scaffold + stub predictor)
 
 **Goal:** Kick off Phase 3 (FastAPI ML service per bible §3/§9). Scaffold the Python service, drop in a deterministic stub for `/predict-match` that matches the front-end's shape exactly, and verify it boots locally.
