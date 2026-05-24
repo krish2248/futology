@@ -25,6 +25,68 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 19 — 2026-05-24 (Phase 3 v0.5 — transfer value regressor, bible §9.4)
+
+**Goal:** Phase 3 v0.5 — XGBoost regressor on `log(market_value_eur)` with quantile heads for the [p10, p90] band and SHAP explanations in EUR. Front-end's Transfer Oracle page already mocks this shape; the swap is a single fetch when GH Pages reads `NEXT_PUBLIC_ML_API_URL`.
+
+**Built (6 atomic commits):**
+
+*Wire format — `app/schemas.py`*
+- `TransferValueRequest` — 9 features: name, position (GK/DEF/MID/FWD literal), age (15-45), 4 per-90 stats (goals/assists/xG/xA), pass accuracy, minutes played, league level (1-5). camelCase aliases (`xGPer90`, `xAPer90`) match `futology/lib/ml/transfer.ts`.
+- `TransferValueResponse` — `predictedValueEur`, `lowEstimate`, `highEstimate`, `shapFactors[]` (each `{label, contribution: EUR}`).
+
+*Trainer — `train_transfer.py`*
+- 1,000 synthetic players with position-conditioned per-90 stat distributions (forwards goal more, defenders pass better, etc.) and an explicit value function (`base + per-stat contributions + age curve + league prior`) with multiplicative log-normal noise.
+- Three XGBoost regressors share the trainer pass:
+  - **median** — `reg:squarederror` for the point estimate
+  - **p10** — `reg:quantileerror, quantile_alpha=0.10` for the low band
+  - **p90** — `reg:quantileerror, quantile_alpha=0.90` for the high band
+- All three train on `log1p(value_eur)`; predictor `expm1`s on the way out.
+- Holdout: **MAE €8.5M, R² 0.791**, band coverage 56.5% (the back-transform tightens the band — honest signal that quantile heads aren't perfectly calibrated). 2.4 MB pickle.
+
+*Predictor — `app/predictors/transfer_value.py`*
+- `TrainedTransferRegressor.load(path)` reads pickle + builds `shap.TreeExplainer` on the median model.
+- `predict(req)` builds the row, scales it, runs all three heads, exponentiates, enforces `low ≤ median ≤ high` (quantile models train independently and can disagree in tails — band is clamped to be well-ordered, no degenerate cases shown to users).
+- SHAP factors converted from log-EUR space to EUR via the marginal delta: `expm1(running_log + contrib_log) - expm1(running_log)`. Top 5 by absolute contribution, each labelled with the feature value (`"Goal-scoring (0.85/90): +€7.1M"`).
+
+*FastAPI wiring*
+- `POST /predict-transfer-value` — bearer-auth; 503 in stub mode (no synthetic fallback yet).
+- `app/main.py` lifespan now loads all three optional artefacts: match (fail-loud), clusterer (warn-only), transfer (warn-only). Each independently absent → corresponding route 503s.
+- `app/state.transfer` initialised to `None` so the route can check cleanly regardless of mode.
+
+**Verified:**
+- `pytest -v` ✓ **26/26** in 7.54s. New transfer tests prove:
+  - Stub mode → 503 with helpful detail.
+  - Happy path: 200, band well-ordered (`low ≤ median ≤ high`), 1-5 SHAP factors with non-empty labels.
+  - **26yo elite-tier forward (Mbappé-shaped) valued higher than 38yo tier-3 defender (aging Ramos-shaped)** — sanity check on the trained dynamics.
+  - `passAccuracy: 120` → 422 (input validation).
+- Live boot in trained mode: `POST /predict-transfer-value {Mbappé-shape}` → `predictedValueEur: €110M`, `low: €79M`, `high: €110M`, factors led by "League tier (tier 1): +€13M" and "xG quality (0.78/90): +€9M".
+
+**Phase 3 Progress:**
+- ✅ v0.4 — player clusterer.
+- ✅ **v0.5 — transfer value regressor with quantile bands + SHAP factors.**
+- ⏳ v0.6 — sentiment pipeline (bible §9.3) and PuLP fantasy optimizer (bible §9.5).
+- ⏳ Railway deploy still on Sonik.
+
+**Completion estimate refresh:**
+
+| Cut | Sessions left | Why |
+|---|---|---|
+| **A — demo-complete + ML live on Railway** | **~1 session** | Just Railway deploy (your action) + GH Actions wiring |
+| **B — full bible-spec, real services everywhere** | **~4-6 sessions** | Phase 2 cutover (Supabase + RapidAPI, 3) + Phase 3 v0.6 sentiment + fantasy (2) + email digest + polish |
+
+~**91-92% of the bible done**. Match prediction + player clustering + transfer valuation are the three core ML models; only sentiment and fantasy remain on the ML side.
+
+**Next session starts here:**
+1. **Railway deploy** — still blocked on Sonik.
+2. Phase 3 v0.6a — Sentiment pipeline (bible §9.3). Two paths:
+   - **Stub-real** — generate synthetic sentiment timelines like clusterer/transfer; no external API. Easy ship.
+   - **Real Reddit** — needs PRAW + Reddit credentials (Sonik action). Pull match threads, run `cardiffnlp/twitter-roberta-base-sentiment-latest` (HF). Heavier.
+   - Recommend stub-real first; swap to Reddit when credentials land.
+3. Phase 3 v0.6b — PuLP fantasy optimizer (bible §9.5). Linear program with constraints (15 players, 2 GK / 5 DEF / 5 MID / 3 FWD, max 3 per club, budget cap). Front-end already mocks via greedy solver in `lib/ml/fantasy.ts`; swap is one POST.
+
+---
+
 ### Session 18 — 2026-05-24 (Phase 3 v0.4 — player clusterer, bible §9.2)
 
 **Goal:** Pick up Phase 3 v0.4 (player clusterer) since the Railway deploy is still parked. KMeans+PCA on per-90 stats, 6 named profiles, working endpoint, committed pickle.
