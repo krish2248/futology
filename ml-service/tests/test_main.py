@@ -151,6 +151,23 @@ def test_trained_mode_uses_model_when_artefact_present(tmp_path) -> None:
         assert 99.0 <= total <= 101.0
 
 
+def test_trained_mode_emits_shap_factors() -> None:
+    """v0.3 — key factors include SHAP contribution numbers, not heuristics."""
+    from pathlib import Path as _Path
+
+    src = _Path(__file__).resolve().parent.parent / "trained_models" / "match_predictor.pkl"
+    if not src.exists():
+        pytest.skip("No trained model on disk; run `python train.py` first.")
+
+    app = _build_app(env={"ML_MODE": "trained", "MATCH_PREDICTOR_PATH": str(src)})
+    with TestClient(app) as trained:
+        body = trained.post("/predict-match", json=SAMPLE_BODY).json()
+        factors = body["keyFactors"]
+        assert 1 <= len(factors) <= 3
+        # Every SHAP factor string carries a signed contribution number.
+        assert any("SHAP contribution" in f for f in factors), factors
+
+
 def test_trained_mode_without_artefact_fails_loudly(tmp_path) -> None:
     """ML_MODE=trained but no model file -> startup raises, no silent fallback."""
     bogus = tmp_path / "missing.pkl"
