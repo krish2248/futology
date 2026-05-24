@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { seedAuth } from './helpers/auth';
 
 test.describe('Homepage', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedAuth(page);
+  });
+
   test('renders hero copy', async ({ page }) => {
     await page.goto('/');
     const heading = page.locator('h1').first();
