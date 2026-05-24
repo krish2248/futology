@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Card } from "@/components/shared/Card";
 import { LiveStrip } from "@/components/cards/MatchCard";
-import { MatchDetailSheet } from "@/components/cards/MatchDetailSheet";
 import { LiveBadge } from "@/components/shared/LiveBadge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { useLiveScores } from "@/hooks/useLiveScores";
+
+const MatchDetailSheet = dynamic(
+  () =>
+    import("@/components/cards/MatchDetailSheet").then((m) => m.MatchDetailSheet),
+  { ssr: false },
+);
 
 export function HomeLive() {
   const [openId, setOpenId] = useState<number | null>(null);
