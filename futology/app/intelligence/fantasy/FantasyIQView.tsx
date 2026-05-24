@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -17,10 +17,10 @@ import { FantasyPitch } from "@/components/intelligence/FantasyPitch";
 import {
   FANTASY_POOL,
   FORMATIONS,
-  optimizeFantasy,
   type FantasyConstraints,
   type OptimizedSquad,
 } from "@/lib/data/demoFantasy";
+import { optimizeFantasyAuto } from "@/lib/ml/fantasyClient";
 import { cn } from "@/lib/utils/cn";
 
 export function FantasyIQView() {
@@ -28,16 +28,25 @@ export function FantasyIQView() {
   const [formationKey, setFormationKey] = useState<keyof typeof FORMATIONS>("4-3-3");
   const [risk, setRisk] = useState<FantasyConstraints["risk"]>("balanced");
   const [copied, setCopied] = useState(false);
+  const [squad, setSquad] = useState<OptimizedSquad | null>(null);
 
-  const squad = useMemo<OptimizedSquad | null>(
-    () =>
-      optimizeFantasy(FANTASY_POOL, {
-        budget,
-        formation: FORMATIONS[formationKey],
-        risk,
-      }),
-    [budget, formationKey, risk],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    optimizeFantasyAuto(FANTASY_POOL, {
+      budget,
+      formation: FORMATIONS[formationKey],
+      risk,
+    })
+      .then((s) => {
+        if (!cancelled) setSquad(s);
+      })
+      .catch(() => {
+        if (!cancelled) setSquad(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [budget, formationKey, risk]);
 
   function copyToClipboard() {
     if (!squad || typeof navigator === "undefined") return;
