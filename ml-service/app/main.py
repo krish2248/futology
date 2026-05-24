@@ -24,6 +24,7 @@ from app.predictors.fantasy import optimize as fantasy_optimize
 from app.predictors.match_stub import predict_match as predict_match_stub
 from app.predictors.player_cluster import list_profiles
 from app.predictors.sentiment import analyze as sentiment_analyze
+from app.proxy import router as proxy_router
 from app.schemas import (
     FantasyOptimizeRequest,
     FantasyOptimizeResponse,
@@ -157,6 +158,8 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+app.include_router(proxy_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])
