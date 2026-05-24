@@ -21,7 +21,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.auth import RequireBearer
 from app.predictors.match_stub import predict_match as predict_match_stub
-from app.schemas import HealthResponse, PredictMatchRequest, PredictMatchResponse
+from app.predictors.player_cluster import list_profiles
+from app.schemas import (
+    HealthResponse,
+    PlayerClusterRequest,
+    PlayerClusterResponse,
+    PredictMatchRequest,
+    PredictMatchResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,23 +65,50 @@ async def lifespan(app: FastAPI):
     """
     app.state.mode = _resolve_mode()
     app.state.trained = None
+    app.state.clusterer = None
     if app.state.mode == "trained":
-        path = Path(os.environ.get("MATCH_PREDICTOR_PATH", "trained_models/match_predictor.pkl"))
-        if not path.is_absolute():
-            path = Path(__file__).resolve().parent.parent / path
-        if not path.exists():
+        match_path = Path(
+            os.environ.get("MATCH_PREDICTOR_PATH", "trained_models/match_predictor.pkl")
+        )
+        if not match_path.is_absolute():
+            match_path = Path(__file__).resolve().parent.parent / match_path
+        if not match_path.exists():
             raise RuntimeError(
-                f"ML_MODE=trained but model artefact not found at {path}. "
+                f"ML_MODE=trained but match artefact not found at {match_path}. "
                 "Run `python train.py` or set MATCH_PREDICTOR_PATH explicitly."
             )
         from app.predictors.match_trained import TrainedMatchPredictor
 
-        app.state.trained = TrainedMatchPredictor.load(path)
+        app.state.trained = TrainedMatchPredictor.load(match_path)
         logger.info(
             "Loaded trained match predictor: acc=%.3f, n_train=%d",
             app.state.trained.test_accuracy,
             app.state.trained.n_train,
         )
+
+        cluster_path = Path(
+            os.environ.get("PLAYER_CLUSTERER_PATH", "trained_models/player_clusterer.pkl")
+        )
+        if not cluster_path.is_absolute():
+            cluster_path = Path(__file__).resolve().parent.parent / cluster_path
+        # Player clusterer is optional — its absence doesn't fail
+        # startup (match prediction is the headline feature). Logged
+        # so operators can debug missing artefacts without grepping
+        # for silent fallbacks.
+        if cluster_path.exists():
+            from app.predictors.player_cluster import TrainedPlayerClusterer
+
+            app.state.clusterer = TrainedPlayerClusterer.load(cluster_path)
+            logger.info(
+                "Loaded trained player clusterer: silhouette=%.3f, n_train=%d",
+                app.state.clusterer.silhouette,
+                app.state.clusterer.n_train,
+            )
+        else:
+            logger.warning(
+                "Player clusterer artefact not found at %s — /predict-player-cluster will 503.",
+                cluster_path,
+            )
     yield
 
 
@@ -106,3 +140,41 @@ def predict_match_route(req: PredictMatchRequest, _: RequireBearer) -> PredictMa
     if app.state.mode == "trained" and app.state.trained is not None:
         return app.state.trained.predict(req)
     return predict_match_stub(req)
+
+
+@app.get("/cluster-profiles", tags=["players"])
+def cluster_profiles_route():
+    """Static catalogue of the 6 player-cluster profiles (id, name, colour, description).
+
+    Always available — doesn't require trained mode. Front-end uses
+    this to render the Player Pulse scatter legend without round-
+    tripping a prediction.
+    """
+    return {"profiles": list_profiles()}
+
+
+@app.post(
+    "/predict-player-cluster",
+    response_model=PlayerClusterResponse,
+    tags=["players"],
+)
+def predict_player_cluster_route(
+    req: PlayerClusterRequest, _: RequireBearer
+) -> PlayerClusterResponse:
+    """Per-90 stats -> cluster + PCA coords (bible §9.2).
+
+    Returns 503 in stub mode (no synthetic fallback yet — a real reply
+    requires the fitted scaler/KMeans/PCA bundle). Run
+    `python train_clusterer.py` and reboot with `ML_MODE=trained`.
+    """
+    from fastapi import HTTPException, status
+
+    if app.state.clusterer is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Player clusterer not loaded. Set ML_MODE=trained and ensure "
+                "trained_models/player_clusterer.pkl exists."
+            ),
+        )
+    return app.state.clusterer.predict(req)
