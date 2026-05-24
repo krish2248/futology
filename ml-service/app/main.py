@@ -20,14 +20,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.auth import RequireBearer
+from app.predictors.fantasy import optimize as fantasy_optimize
 from app.predictors.match_stub import predict_match as predict_match_stub
 from app.predictors.player_cluster import list_profiles
+from app.predictors.sentiment import analyze as sentiment_analyze
 from app.schemas import (
+    FantasyOptimizeRequest,
+    FantasyOptimizeResponse,
     HealthResponse,
     PlayerClusterRequest,
     PlayerClusterResponse,
     PredictMatchRequest,
     PredictMatchResponse,
+    SentimentRequest,
+    SentimentResponse,
     TransferValueRequest,
     TransferValueResponse,
 )
@@ -203,6 +209,48 @@ def predict_player_cluster_route(
             ),
         )
     return app.state.clusterer.predict(req)
+
+
+@app.post(
+    "/sentiment-analyze",
+    response_model=SentimentResponse,
+    tags=["sentiment"],
+)
+def sentiment_analyze_route(
+    req: SentimentRequest, _: RequireBearer
+) -> SentimentResponse:
+    """Per-fixture sentiment snapshot (bible §9.3).
+
+    v0.6a — deterministic seeded synthetic timeline + reactions. Always
+    available, no pickle needed. Swap to Reddit+RoBERTa in v0.7 by
+    plugging the real provider into `app.predictors.sentiment._collect_reactions`.
+    """
+    return sentiment_analyze(req)
+
+
+@app.post(
+    "/fantasy-optimize",
+    response_model=FantasyOptimizeResponse,
+    tags=["fantasy"],
+)
+def fantasy_optimize_route(
+    req: FantasyOptimizeRequest, _: RequireBearer
+) -> FantasyOptimizeResponse:
+    """Integer linear program for the optimal 15-man squad (bible §9.5).
+
+    Caller supplies the candidate pool (the front-end has it via
+    `lib/data/demoFantasy.ts`); the LP picks 15 maximising adjusted
+    predicted points subject to budget, positional composition, and
+    max-3-per-club. Always available, no pickle needed.
+    """
+    try:
+        return fantasy_optimize(req)
+    except ValueError as exc:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
 
 @app.post(
