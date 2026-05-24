@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Coins, Users } from "lucide-react";
@@ -8,20 +8,35 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Card } from "@/components/shared/Card";
 import { PlayerPicker } from "@/components/intelligence/PlayerPicker";
 import {
-  predictTransferValue,
   formatEUR,
   formatEURSigned,
   type TransferValuation,
 } from "@/lib/ml/transfer";
+import { predictTransferValueAuto } from "@/lib/ml/transferClient";
 import { type PlayerStatLine } from "@/lib/data/demoPlayerStats";
 import { cn } from "@/lib/utils/cn";
 
 export function TransferOracleView() {
   const [player, setPlayer] = useState<PlayerStatLine | null>(null);
-  const valuation = useMemo<TransferValuation | null>(
-    () => (player ? predictTransferValue(player) : null),
-    [player],
-  );
+  const [valuation, setValuation] = useState<TransferValuation | null>(null);
+
+  useEffect(() => {
+    if (!player) {
+      setValuation(null);
+      return;
+    }
+    let cancelled = false;
+    predictTransferValueAuto(player)
+      .then((v) => {
+        if (!cancelled) setValuation(v);
+      })
+      .catch(() => {
+        if (!cancelled) setValuation(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [player]);
 
   return (
     <div className="space-y-6">
