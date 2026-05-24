@@ -70,8 +70,12 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 - ✅ CI/CD: front-end GH Pages deploy, ML-service pytest+ruff workflow, both green
 - ⏳ One Sonik action remaining: deploy the HF Space + add two repo secrets. Everything else lights up automatically after.
 
-**Next session starts here:**
-1. Sonik confirms the HF Space is live + the two repo secrets are set.
+**Paused at end of Session 23 (2026-05-24):**
+
+HF Space Docker build completed, Space was in "Starting" state. Sonik ran out of time before setting the 4 HF secrets + 2 GitHub repo secrets. All code is pushed. The user returns tomorrow to finish.
+
+**Next session (Session 24) starts here:**
+1. Sonik finishes Steps C + D + E above (4 HF secrets, 2 GH secrets, smoke-test).
 2. We update the front-end's `lib/api/client.ts` and hooks to consume the new proxy routes (real standings, real fixtures, real top scorers) — currently the demo data layer feeds the UI; after the swap it's real live football.
 3. Add a `useStandings` / `useScorers` / `useFixtures` real-data branch that flips on when `NEXT_PUBLIC_ML_API_URL` is set, mirroring the predictor auto-router pattern.
 
