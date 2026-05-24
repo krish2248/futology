@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { signInAuto, type SignInResult } from "@/lib/auth/auto";
 import { useSession } from "@/lib/store/session";
 import { cn } from "@/lib/utils/cn";
 
@@ -12,26 +13,35 @@ type Step = "form" | "sent" | "ready";
 
 export default function LoginPage() {
   const router = useRouter();
-  const signIn = useSession((s) => s.signIn);
   const onboardingComplete = useSession((s) => s.onboardingComplete);
 
   const [email, setEmail] = useState("");
   const [step, setStep] = useState<Step>("form");
+  const [authMode, setAuthMode] = useState<SignInResult["mode"] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isValidEmail(email)) return;
-    startTransition(() => {
-      // Demo: pretend we sent an email. In Phase 1.5 this calls Supabase auth.signInWithOtp.
-      setTimeout(() => setStep("sent"), 600);
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await signInAuto(email);
+        setAuthMode(result.mode);
+        setStep("sent");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not send the magic link.");
+      }
     });
   }
 
   function handleContinue() {
-    signIn(email);
+    // The Continue button only does work in demo mode — in Supabase
+    // OTP mode the user clicks the link in their email and lands back
+    // here via the redirect URL.
+    if (authMode === "supabase-otp") return;
     setStep("ready");
-    // Tiny pause so the success animation reads
     setTimeout(() => {
       router.push(onboardingComplete ? "/" : "/onboarding");
     }, 400);
@@ -121,6 +131,14 @@ export default function LoginPage() {
                       <ArrowRight className="h-4 w-4" aria-hidden />
                     ) : null}
                   </button>
+                  {error ? (
+                    <p
+                      role="alert"
+                      className="rounded-md border border-live/40 bg-live/10 px-3 py-2 text-xs text-live"
+                    >
+                      {error}
+                    </p>
+                  ) : null}
                   <p className="text-center text-xs text-text-muted">
                     By continuing you agree to play nice with football data.
                   </p>
@@ -146,22 +164,36 @@ export default function LoginPage() {
                     <div>
                       <h2 className="font-semibold">Check your inbox</h2>
                       <p className="mt-1 text-sm text-text-secondary">
-                        We sent a magic link to{" "}
-                        <span className="font-medium text-text-primary">
-                          {email}
-                        </span>
-                        . Click it, or continue here in demo mode.
+                        {authMode === "supabase-otp" ? (
+                          <>
+                            We sent a magic link to{" "}
+                            <span className="font-medium text-text-primary">
+                              {email}
+                            </span>
+                            . Click it on this device to finish signing in.
+                          </>
+                        ) : (
+                          <>
+                            We sent a magic link to{" "}
+                            <span className="font-medium text-text-primary">
+                              {email}
+                            </span>
+                            . Click it, or continue here in demo mode.
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleContinue}
-                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-bg-primary transition-colors hover:bg-accent-hover"
-                  >
-                    Continue in demo mode
-                    <ArrowRight className="h-4 w-4" aria-hidden />
-                  </button>
+                  {authMode === "supabase-otp" ? null : (
+                    <button
+                      type="button"
+                      onClick={handleContinue}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-bg-primary transition-colors hover:bg-accent-hover"
+                    >
+                      Continue in demo mode
+                      <ArrowRight className="h-4 w-4" aria-hidden />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setStep("form")}
