@@ -25,6 +25,60 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 22 — 2026-05-24 (Phase 2 Supabase prep + ml-service CI + readiness audit)
+
+**Goal:** Sonik asked for the entire project complete, CI/CD wired, no errors, every feature checked. Session 22 delivers the Phase 2 cutover scaffolding (so the Vercel target is one click-through away), the ml-service GitHub Actions workflow (so the back-end has CI parity with the front-end), and `PROJECT_STATUS.md` — an honest, phase-by-phase audit of what's complete vs what needs a user account.
+
+**Built (12 atomic commits across two themes):**
+
+*Theme A — Supabase + Vercel cutover prep*
+- `npm install @supabase/supabase-js @supabase/ssr` — added to `futology/package.json`.
+- `futology/lib/supabase/types.ts` — hand-typed `Database` interface mirroring bible §6 column-for-column. Documented `supabase gen types` regen step.
+- `futology/lib/supabase/client.ts` — `getSupabaseBrowserClient()` + `isSupabaseConfigured()`. Returns `null` when env unset so callers can branch safely.
+- `futology/lib/supabase/server.ts` — `createServerClient` for the Vercel SSR target. Dead code in static export by design; the GH Pages workflow never imports it.
+- `futology/lib/auth/auto.ts` — `signInAuto(email)` / `signOutAuto()`. Routes to Supabase OTP when configured, falls back to the existing Zustand demo signIn. Same return-shape contract on both branches.
+- `futology/app/login/page.tsx` — switched the form submit to `signInAuto`. Conditional UI: in Supabase OTP mode the "Continue in demo mode" CTA is hidden and the copy points the user at their inbox. Added an inline error banner for failed sends.
+- `supabase/schema.sql` — bible §6 verbatim (tables + RLS + triggers + realtime publications), ready to paste into Supabase SQL editor.
+- `docs/SUPABASE_CUTOVER.md` — full walkthrough: Supabase project creation, schema apply, email-OTP setup, type regen, Vercel deploy with env vars, verification steps, rollback. Covers free-tier guardrails for both Supabase and Vercel.
+
+*Theme B — CI / readiness audit*
+- `.github/workflows/ml-service-ci.yml` — GitHub Actions workflow: sets up Python 3.11, installs `[dev,runtime-model]` extras, runs `ruff check`, runs `pytest -v`. Triggered on push/PR touching `ml-service/**`. Opts into Node 24 for the JavaScript actions.
+- Ruff cleanup of `ml-service/` — autofixed 15 issues, manually resolved the remaining 29 (unnecessary `int(round(…))` casts, ambiguous unicode `×`, multiple-statements-per-line, long lines, unused locals). `ruff check .` now reports `All checks passed!`.
+- `docs/PROJECT_STATUS.md` — comprehensive per-phase readiness report:
+  - Test surface table (typecheck, lint, build, Playwright, ruff, pytest, parity — all green)
+  - Phase-by-phase checklist with explicit user-action callouts (Railway, Supabase + Vercel)
+  - "Deferred (acknowledged, not blocking)" section so no part of the spec is silently missing
+  - Rollback section explaining every cutover is env-flag-gated
+
+**Verified — full audit pass:**
+- Front-end `tsc --noEmit` ✓ clean
+- Front-end `next lint` ✓ no warnings or errors
+- Front-end `next build` (static export) ✓ **116 routes**, shared FLJS **87.5 kB** (Supabase deps add zero to the demo bundle since they're only reachable via the auto-router branch)
+- Playwright Chromium ✓ **40/40** in ~50 s
+- `ml-service` ruff ✓ All checks passed
+- `ml-service` pytest ✓ **32/32** in 8.09 s
+- TS↔Python predictor parity ✓ byte-identical across 9 fixture cases
+
+**Project completion status:**
+- ✅ All front-end Phase 0-7 features built and tested
+- ✅ All Phase 3 ML models trained and committed (3.2 MB match predictor + 4 KB clusterer + 2.4 MB transfer regressor; synthetic sentiment + PuLP fantasy are computed at request time, no pickle)
+- ✅ Front-end auto-routers ready for every endpoint
+- ✅ Supabase cutover plumbed end-to-end (auth, schema, docs)
+- ✅ CI/CD for both surfaces (frontend GH Pages deploy + ml-service pytest)
+- ⏳ Three one-time user actions remain (Railway deploy, GH Actions secrets for ML API URL, Supabase + Vercel target) — none require code
+
+**Phase 3 v0.7+ roadmap (post-cutover):**
+- Reddit + RoBERTa sentiment swap (replaces `_collect_reactions`, no API change).
+- FBref / Understat pulls for per-90 player stats (replaces synthetic in `train_clusterer.py` + `train_transfer.py`).
+- Per-club form features in match predictor via API-Football fetch in front of `/predict-match`.
+
+**Next session starts here:**
+1. Sonik finishes Railway + Vercel deploys (walkthroughs are in `SESSION.md` Session 15 and `docs/SUPABASE_CUTOVER.md`).
+2. Wire `NEXT_PUBLIC_ML_API_URL` / `NEXT_PUBLIC_ML_API_TOKEN` into `.github/workflows/deploy.yml` as repo secrets, re-deploy GH Pages.
+3. Once both are live, write the v0.8.0 changelog entry — "All ML endpoints live, real auth, RLS persistence" — and tag the release.
+
+---
+
 ### Session 21 — 2026-05-24 (front-end wiring — every ML endpoint Railway-ready)
 
 **Goal:** Replicate the `predictMatchAuto` pattern across the four other ML endpoints so the front-end is one env-var away from calling Railway for every Intelligence feature. Session 20 finished the back-end; this session finishes the cutover plumbing.
