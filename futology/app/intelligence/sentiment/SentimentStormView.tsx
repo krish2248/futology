@@ -11,10 +11,10 @@ import { SentimentTimeline } from "@/components/intelligence/SentimentTimeline";
 import { SentimentGauge } from "@/components/intelligence/SentimentGauge";
 import { getDemoMatches } from "@/lib/data/demoMatches";
 import {
-  getDemoSentiment,
   type SentimentSnapshot,
   type SentimentReaction,
 } from "@/lib/data/demoSentiment";
+import { analyzeSentimentAuto } from "@/lib/ml/sentimentClient";
 import { cn } from "@/lib/utils/cn";
 
 export function SentimentStormView() {
@@ -23,9 +23,25 @@ export function SentimentStormView() {
     [],
   );
   const [matchId, setMatchId] = useState<number>(matches[0]?.id ?? 1);
-  const snapshot = useMemo<SentimentSnapshot | null>(() => {
+  const [snapshot, setSnapshot] = useState<SentimentSnapshot | null>(null);
+
+  useEffect(() => {
     const m = matches.find((x) => x.id === matchId) ?? matches[0];
-    return m ? getDemoSentiment(m) : null;
+    if (!m) {
+      setSnapshot(null);
+      return;
+    }
+    let cancelled = false;
+    analyzeSentimentAuto(m)
+      .then((s) => {
+        if (!cancelled) setSnapshot(s);
+      })
+      .catch(() => {
+        if (!cancelled) setSnapshot(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [matchId, matches]);
 
   // Tick the live feed by adding a synthetic reaction every 8s while a live match is selected.
