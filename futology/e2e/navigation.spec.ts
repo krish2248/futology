@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { seedAuth } from './helpers/auth';
 
 test.describe('Navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedAuth(page);
+  });
+
   test('all primary tabs are reachable', async ({ page }) => {
     const routes = ['/', '/scores', '/predictions', '/intelligence', '/profile'];
     for (const route of routes) {
