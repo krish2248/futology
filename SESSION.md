@@ -25,6 +25,42 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 11 — 2026-05-24 (broaden E2E auth seed, audit app/ for RSC misuse)
+
+**Goal:** Burn down Session 10's "Next session starts here" items #1 and #2 — apply the new `seedAuth` helper across the remaining protected-route specs (so they test the real pages, not `/login`), and audit the rest of `app/` for the same RSC-uses-client-hook smell that bit `/leagues`.
+
+**Built (6 atomic commits):**
+
+*Audit — `app/**/page.tsx` for client-hook usage without `"use client"`*
+- Grepped every `page.tsx` for `useIsClient | useState | useEffect | useSession | useRouter | usePathname | useMemo | useCallback | useRef`.
+- Only `app/login/page.tsx` and `app/onboarding/page.tsx` use client hooks, and both already declare `"use client"`. Every other `page.tsx` is a server-component wrapper that delegates to a client view.
+- Also checked `loading.tsx` / `not-found.tsx` / `error.tsx` / `layout.tsx` / `template.tsx` — none use client hooks. **`/leagues` was the only offender**, and it's already fixed.
+
+*`seedAuth` rolled across the remaining specs — 6 files*
+- `e2e/homepage.spec.ts` — `beforeEach(seedAuth)`; previously was passing on `/login` because both pages happen to have an `h1` + `main` + a few links.
+- `e2e/intelligence.spec.ts` — `beforeEach(seedAuth)`; the feature-card assertion now uses `await expect(cards.nth(5)).toBeVisible()` instead of `count() >= 6`, so it waits through hydration and asserts against a `main`-scoped href.
+- `e2e/navigation.spec.ts` — `beforeEach(seedAuth)` so all 5 primary-tab visits actually land on their pages.
+- `e2e/predictions.spec.ts` — `beforeEach(seedAuth)`.
+- `e2e/scores.spec.ts` — `beforeEach(seedAuth)`.
+- `e2e/extras.spec.ts` — `beforeEach(seedAuth)`; the cards assertion now uses `await expect(cards.first()).toBeVisible()` against a `main`-scoped href.
+
+**Verified:**
+- `npx tsc --noEmit` ✓ clean.
+- `npx playwright test` ✓ **40 passed in 1.1 min**. No regressions; every protected-route spec now provably hits the real page.
+
+**Phase 7 Progress (continued):**
+- ✅ Playwright suite is honest end-to-end — every protected-route assertion runs against the real page, not the redirected `/login` fallback.
+- ✅ App Router audit clean — no other RSC-uses-client-hook violations.
+- ⏳ Lighthouse audit ≥ 90 still outstanding.
+- ⏳ Vercel + Supabase cutover still outstanding.
+
+**Next session starts here:**
+1. Run a Lighthouse audit on the live GH Pages URL (`https://krish2248.github.io/futology/`) — target ≥ 90 across Performance / Accessibility / Best Practices / SEO. Wire `@next/bundle-analyzer` if Performance is short. (Issue #2 / #3)
+2. Decide: Supabase + Vercel cutover (real-services migration) vs. Phase 3 (FastAPI ML service).
+3. Cut a `v0.7.0` release tag once the next batch of Phase 7 work lands.
+
+---
+
 ### Session 10 — 2026-05-24 (hook migrations, Playwright green-suite, leagues bug fix)
 
 **Goal:** Burn down Session 9's "Next session starts here" punch list — migrate the five components flagged in task #1 onto the shared hooks, then actually run the full Playwright suite locally and stabilise any flakes.
