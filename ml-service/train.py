@@ -233,7 +233,9 @@ def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     return feature_df, targets_s
 
 
-def train_model(X: pd.DataFrame, y: pd.Series) -> tuple[CalibratedClassifierCV, dict[str, float]]:
+def train_model(
+    X: pd.DataFrame, y: pd.Series
+) -> tuple[CalibratedClassifierCV, XGBClassifier, dict[str, float]]:
     y_idx = y.map(LABEL_TO_INDEX).to_numpy()
     base = XGBClassifier(
         n_estimators=300,
@@ -260,10 +262,12 @@ def train_model(X: pd.DataFrame, y: pd.Series) -> tuple[CalibratedClassifierCV, 
     # wrap the already-trained XGBoost and let CalibratedClassifierCV
     # learn the isotonic mapping on the same training data — fine for
     # this size (~9k matches) since the holdout is a separate temporal
-    # slice handled in main().
+    # slice handled in main(). The bare `base` is returned alongside so
+    # SHAP's TreeExplainer can run against the actual XGBoost rather
+    # than peel through the calibrator wrapper at inference time.
     calibrated = CalibratedClassifierCV(FrozenEstimator(base), method="isotonic", cv=5)
     calibrated.fit(X, y_idx)
-    return calibrated, {"weights_median": float(counts.median())}
+    return calibrated, base, {"weights_median": float(counts.median())}
 
 
 def main() -> int:
@@ -296,7 +300,7 @@ def main() -> int:
     print(f"-> Temporal split: train={len(X_train):,}  test={len(X_test):,}")
 
     print("-> Fitting XGBoost + isotonic calibration")
-    calibrated, meta = train_model(X_train, y_train)
+    calibrated, base_xgb, meta = train_model(X_train, y_train)
 
     y_test_idx = y_test.map(LABEL_TO_INDEX).to_numpy()
     probs = calibrated.predict_proba(X_test)
@@ -311,6 +315,7 @@ def main() -> int:
 
     artifact = {
         "model": calibrated,
+        "base_xgb": base_xgb,
         "feature_columns": list(X.columns),
         "classes": CLASSES,
         "label_to_index": LABEL_TO_INDEX,
