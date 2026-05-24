@@ -108,3 +108,42 @@ class PlayerClusterResponse(CamelModel):
     pca_x: float
     pca_y: float
     confidence: float = Field(..., ge=0, le=100, description="Closeness to assigned centroid (0-100).")
+
+
+# --- Transfer value (bible §9.4) -------------------------------------------
+
+Position = Literal["GK", "DEF", "MID", "FWD"]
+
+
+class TransferValueRequest(CamelModel):
+    """Inputs the trained transfer regressor needs.
+
+    Subset of bible §9.4's feature list (the rest — continent, UEFA
+    coefficient, contract years, caps — land when API-Football data is
+    wired in v0.6). Pass `passAccuracy` 0-100 and `minutesPlayed` for
+    the prior season.
+    """
+
+    name: str
+    position: Position
+    age: int = Field(..., ge=15, le=45)
+    goals_per_90: float = Field(..., ge=0)
+    assists_per_90: float = Field(..., ge=0)
+    x_g_per_90: float = Field(..., ge=0, alias="xGPer90")
+    x_a_per_90: float = Field(..., ge=0, alias="xAPer90")
+    pass_accuracy: float = Field(..., ge=0, le=100)
+    minutes_played: int = Field(..., ge=0)
+    league_level: int = Field(..., ge=1, le=5, description="1 = elite, 5 = lower division.")
+
+
+class TransferFactor(CamelModel):
+    label: str
+    contribution: float = Field(..., description="Signed EUR contribution from this feature.")
+
+
+class TransferValueResponse(CamelModel):
+    name: str
+    predicted_value_eur: int = Field(..., ge=0)
+    low_estimate: int = Field(..., ge=0, description="10th percentile of the trained quantile model.")
+    high_estimate: int = Field(..., ge=0, description="90th percentile of the trained quantile model.")
+    shap_factors: list[TransferFactor] = Field(..., max_length=8)
