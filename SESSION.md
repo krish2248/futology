@@ -25,6 +25,61 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 12 — 2026-05-24 (Lighthouse ≥ 90 across the board, deploy resurrected)
+
+**Goal:** Run the Lighthouse audit from Session 11's punch list. Hit ≥ 90 on all four categories.
+
+**What we found first:**
+- Initial Lighthouse run on the live URL: **Perf 78 / A11y 96 / BP 96 / SEO 100**. Performance was the only laggard, dominated by Total Blocking Time of 629 ms from a 691 ms task in the shared vendor chunk (framer-motion + the Navbar popovers).
+- More critically: **every GitHub Pages deploy has been failing since 2026-05-09** (15+ red runs). The "live" URL was serving the Session 5 build the whole time. CI log surfaced the root cause — `app/offline/page.tsx` had an `onClick` handler with no `"use client"` directive, breaking static export. Lighthouse was measuring stale code.
+
+**Built (4 atomic commits, 1 audit log entry):**
+
+*Build fix — unblock deploys*
+- `app/offline/page.tsx` — added `"use client"`. Static export now generates `/offline/` successfully; the deploy pipeline turned green for the first time in two weeks.
+
+*Performance — keep framer-motion out of the first-load chunk*
+- `components/layout/Navbar.tsx` — `SearchModal` and `NotificationBell` are now `dynamic(...)` imports with `ssr: false`. The bell button shows a 9×9 placeholder until hydration so layout doesn't shift. Framer-motion now ships in its own chunk loaded on first interaction.
+- `app/HomeLive.tsx` — `MatchDetailSheet` is now a dynamic import too, so framer-motion stays off the home page entirely.
+
+*Hygiene*
+- `.gitignore` — added `lighthouse-reports/` so audit artifacts don't pollute the repo.
+
+**Verified:**
+- `npx tsc --noEmit` ✓ clean.
+- `npx playwright test` ✓ **40 passed in 31s** — no regressions from the dynamic imports.
+- `next build` ✓ — home `/` first-load JS is now 126 kB (was higher with MatchDetailSheet inline). Shared first-load JS stays at 87.5 kB. `/offline` builds again (493 B).
+- GitHub Actions deploy run `26356381943` → **success**. First green deploy since `b6f192e` on 2026-05-09.
+
+**Lighthouse — before vs after, against `https://krish2248.github.io/futology/`:**
+
+| Category | Before | After | Δ |
+|---|---|---|---|
+| **Performance** | **78** | **97** | **+19** |
+| Accessibility | 96 | 96 | 0 |
+| Best Practices | 96 | 96 | 0 |
+| SEO | 100 | 100 | 0 |
+
+| Metric | Before | After | Δ |
+|---|---|---|---|
+| First Contentful Paint | 1167 ms | 1162 ms | −4 ms |
+| Largest Contentful Paint | 2887 ms | 2523 ms | −364 ms |
+| **Total Blocking Time** | **629 ms** | **18 ms** | **−611 ms** |
+| Speed Index | 2849 ms | 2784 ms | −65 ms |
+
+**Phase 7 Progress (continued):**
+- ✅ **Lighthouse ≥ 90 across all four categories** — bible target hit (Issue #2 / #3 closable).
+- ✅ GitHub Pages auto-deploy is healthy again — `01dbb06` is live.
+- ⏳ Vercel + Supabase cutover still outstanding (the real-services migration).
+- ⏳ `v0.7.0` release tag still to cut.
+
+**Next session starts here:**
+1. Cut `v0.7.0` — the demo-mode build is feature-complete and now passes the full Phase 7 quality bar (typecheck, E2E, Lighthouse, deploy).
+2. Decide direction: Supabase + Vercel cutover (real-services migration on a separate target) vs. Phase 3 (FastAPI ML service).
+3. Optional follow-ups: bump the workflow actions to Node 24 before the June 2026 deprecation; consider splitting `NotificationBell` into a sync button + lazy popover so the placeholder is visually identical.
+
+---
+
 ### Session 11 — 2026-05-24 (broaden E2E auth seed, audit app/ for RSC misuse)
 
 **Goal:** Burn down Session 10's "Next session starts here" items #1 and #2 — apply the new `seedAuth` helper across the remaining protected-route specs (so they test the real pages, not `/login`), and audit the rest of `app/` for the same RSC-uses-client-hook smell that bit `/leagues`.
