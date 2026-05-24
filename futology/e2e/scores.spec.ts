@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { seedAuth } from './helpers/auth';
 
 test.describe('Scores', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedAuth(page);
+  });
+
   test('scores page renders', async ({ page }) => {
     await page.goto('/scores');
     await expect(page.locator('main')).toBeVisible();
