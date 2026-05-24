@@ -1,7 +1,7 @@
 """Download football-data.co.uk season CSVs into `ml-service/data/raw/`.
 
 Idempotent — already-downloaded files are skipped on subsequent runs.
-Five league codes × six seasons = 30 small CSVs (~50 KB each), so the
+Five league codes x six seasons = 30 small CSVs (~50 KB each), so the
 full download is a couple of MB. The site is unauthenticated and free.
 
 Usage:

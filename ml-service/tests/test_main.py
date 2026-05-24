@@ -511,6 +511,5 @@ def test_trained_mode_without_artefact_fails_loudly(tmp_path) -> None:
     """ML_MODE=trained but no model file -> startup raises, no silent fallback."""
     bogus = tmp_path / "missing.pkl"
     app = _build_app(env={"ML_MODE": "trained", "MATCH_PREDICTOR_PATH": str(bogus)})
-    with pytest.raises(RuntimeError, match="not found"):
-        with TestClient(app):
-            pass
+    with pytest.raises(RuntimeError, match="not found"), TestClient(app):
+        pass

@@ -25,9 +25,9 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import defaultdict, deque
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import joblib
 import numpy as np
@@ -116,7 +116,7 @@ class RollingState:
     last_match_date: pd.Timestamp | None
 
     @classmethod
-    def fresh(cls) -> "RollingState":
+    def fresh(cls) -> RollingState:
         return cls(
             last5_goals_for=deque(maxlen=5),
             last5_goals_against=deque(maxlen=5),
@@ -194,32 +194,52 @@ def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
         hg, ag = int(row.home_goals), int(row.away_goals)
         if row.ftr == "H":
             score_home, score_away = 1.0, 0.0
-            ht.last5_wins.append(1); ht.last5_draws.append(0); ht.last5_losses.append(0)
-            at.last5_wins.append(0); at.last5_draws.append(0); at.last5_losses.append(1)
+            ht.last5_wins.append(1)
+            ht.last5_draws.append(0)
+            ht.last5_losses.append(0)
+            at.last5_wins.append(0)
+            at.last5_draws.append(0)
+            at.last5_losses.append(1)
             h2h[pair].append(home)
         elif row.ftr == "A":
             score_home, score_away = 0.0, 1.0
-            ht.last5_wins.append(0); ht.last5_draws.append(0); ht.last5_losses.append(1)
-            at.last5_wins.append(1); at.last5_draws.append(0); at.last5_losses.append(0)
+            ht.last5_wins.append(0)
+            ht.last5_draws.append(0)
+            ht.last5_losses.append(1)
+            at.last5_wins.append(1)
+            at.last5_draws.append(0)
+            at.last5_losses.append(0)
             h2h[pair].append(away)
         else:
             score_home, score_away = 0.5, 0.5
-            ht.last5_wins.append(0); ht.last5_draws.append(1); ht.last5_losses.append(0)
-            at.last5_wins.append(0); at.last5_draws.append(1); at.last5_losses.append(0)
+            ht.last5_wins.append(0)
+            ht.last5_draws.append(1)
+            ht.last5_losses.append(0)
+            at.last5_wins.append(0)
+            at.last5_draws.append(1)
+            at.last5_losses.append(0)
             h2h[pair].append("D")
 
         ht.last5_goals_for.append(hg)
         ht.last5_goals_against.append(ag)
         ht.last5_clean_sheets.append(1 if ag == 0 else 0)
-        ht.last5_shots_for.append(int(row.home_shots) if not pd.isna(row.home_shots) else 0)
-        ht.last5_shots_on_target.append(int(row.home_shots_target) if not pd.isna(row.home_shots_target) else 0)
+        ht.last5_shots_for.append(
+            int(row.home_shots) if not pd.isna(row.home_shots) else 0
+        )
+        ht.last5_shots_on_target.append(
+            int(row.home_shots_target) if not pd.isna(row.home_shots_target) else 0
+        )
         ht.last_match_date = row.date
 
         at.last5_goals_for.append(ag)
         at.last5_goals_against.append(hg)
         at.last5_clean_sheets.append(1 if hg == 0 else 0)
-        at.last5_shots_for.append(int(row.away_shots) if not pd.isna(row.away_shots) else 0)
-        at.last5_shots_on_target.append(int(row.away_shots_target) if not pd.isna(row.away_shots_target) else 0)
+        at.last5_shots_for.append(
+            int(row.away_shots) if not pd.isna(row.away_shots) else 0
+        )
+        at.last5_shots_on_target.append(
+            int(row.away_shots_target) if not pd.isna(row.away_shots_target) else 0
+        )
         at.last_match_date = row.date
 
         # ELO update
@@ -289,7 +309,7 @@ def main() -> int:
 
     print("-> Building features (one walk in date order)")
     X, y = build_features(matches)
-    print(f"  features: {X.shape[1]} cols × {X.shape[0]:,} rows")
+    print(f"  features: {X.shape[1]} cols x {X.shape[0]:,} rows")
     print(f"  target distribution: {y.value_counts().to_dict()}")
 
     # Temporal train/test split — last 20% of matches in chronological
@@ -321,8 +341,8 @@ def main() -> int:
         "label_to_index": LABEL_TO_INDEX,
         "test_accuracy": float(acc),
         "test_log_loss": float(ll),
-        "n_train": int(len(X_train)),
-        "n_test": int(len(X_test)),
+        "n_train": len(X_train),
+        "n_test": len(X_test),
         "training_meta": meta,
     }
     joblib.dump(artifact, MODEL_PATH)

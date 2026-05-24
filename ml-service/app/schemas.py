@@ -47,7 +47,10 @@ class PredictMatchRequest(CamelModel):
     )
     league_tier: LeagueTier | None = Field(
         default=None,
-        description="Drives the tier-bonus modulation in the stub predictor; ignored by the trained model.",
+        description=(
+            "Drives the tier-bonus modulation in the stub predictor; "
+            "ignored by the trained model."
+        ),
     )
 
 
@@ -107,7 +110,9 @@ class PlayerClusterResponse(CamelModel):
     color: str = Field(..., examples=["#FF6B6B"])
     pca_x: float
     pca_y: float
-    confidence: float = Field(..., ge=0, le=100, description="Closeness to assigned centroid (0-100).")
+    confidence: float = Field(
+        ..., ge=0, le=100, description="Closeness to assigned centroid (0-100)."
+    )
 
 
 # --- Transfer value (bible §9.4) -------------------------------------------
@@ -144,8 +149,12 @@ class TransferFactor(CamelModel):
 class TransferValueResponse(CamelModel):
     name: str
     predicted_value_eur: int = Field(..., ge=0)
-    low_estimate: int = Field(..., ge=0, description="10th percentile of the trained quantile model.")
-    high_estimate: int = Field(..., ge=0, description="90th percentile of the trained quantile model.")
+    low_estimate: int = Field(
+        ..., ge=0, description="10th percentile of the trained quantile model."
+    )
+    high_estimate: int = Field(
+        ..., ge=0, description="90th percentile of the trained quantile model."
+    )
     shap_factors: list[TransferFactor] = Field(..., max_length=8)
 
 

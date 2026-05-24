@@ -95,7 +95,10 @@ def optimize(req: FantasyOptimizeRequest) -> FantasyOptimizeResponse:
             )
 
     problem = pulp.LpProblem("fantasy_squad", pulp.LpMaximize)
-    pick = {p.candidate.id: pulp.LpVariable(f"pick_{p.candidate.id}", cat=pulp.LpBinary) for p in adjusted}
+    pick = {
+        p.candidate.id: pulp.LpVariable(f"pick_{p.candidate.id}", cat=pulp.LpBinary)
+        for p in adjusted
+    }
 
     problem += pulp.lpSum(pick[p.candidate.id] * p.adjusted_points for p in adjusted)
 

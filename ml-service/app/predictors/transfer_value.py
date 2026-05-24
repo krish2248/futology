@@ -19,7 +19,6 @@ import shap
 
 from app.schemas import TransferFactor, TransferValueRequest, TransferValueResponse
 
-
 # Pretty labels for the SHAP factor strings. Numbers without context are
 # noise — `goals_per_90` becomes "Goal-scoring (0.45/90)" so a user
 # reading the dashboard knows what the SHAP contribution attaches to.
@@ -67,7 +66,7 @@ class TrainedTransferRegressor:
     n_train: int
 
     @classmethod
-    def load(cls, path: Path) -> "TrainedTransferRegressor":
+    def load(cls, path: Path) -> TrainedTransferRegressor:
         artefact = joblib.load(path)
         return cls(
             scaler=artefact["scaler"],
@@ -129,9 +128,9 @@ class TrainedTransferRegressor:
 
         return TransferValueResponse(
             name=req.name,
-            predicted_value_eur=int(round(median_eur)),
-            low_estimate=int(round(p10_eur)),
-            high_estimate=int(round(p90_eur)),
+            predicted_value_eur=round(median_eur),
+            low_estimate=round(p10_eur),
+            high_estimate=round(p90_eur),
             shap_factors=factors,
         )
 
@@ -149,10 +148,7 @@ class TrainedTransferRegressor:
             return []
 
         arr = np.asarray(shap_log)
-        if arr.ndim == 2:
-            contribs_log = arr[0]
-        else:
-            contribs_log = arr
+        contribs_log = arr[0] if arr.ndim == 2 else arr
 
         baseline_log = float(self.explainer.expected_value)
         running_log = baseline_log

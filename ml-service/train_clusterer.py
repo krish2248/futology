@@ -118,7 +118,7 @@ def main() -> int:
     kmeans.fit(X_scaled)
 
     pca = PCA(n_components=2, random_state=RANDOM_STATE)
-    coords = pca.fit_transform(X_scaled)
+    pca.fit(X_scaled)
 
     label_to_cluster = map_labels_to_clusters(kmeans, scaler)
     print("-> KMeans label -> cluster id:")
@@ -129,7 +129,7 @@ def main() -> int:
     silhouette = silhouette_score(X_scaled, kmeans.labels_)
     inertia = kmeans.inertia_
     pca_var = float(pca.explained_variance_ratio_.sum())
-    print(f"\n=== Diagnostics ===")
+    print("\n=== Diagnostics ===")
     print(f"  silhouette score:        {silhouette:.3f}  (>0.5 is well-separated)")
     print(f"  inertia (within-cluster): {inertia:.1f}")
     print(f"  PCA explained variance:  {pca_var * 100:.1f}%")
@@ -145,7 +145,7 @@ def main() -> int:
         "pca": pca,
         "label_to_cluster": label_to_cluster,
         "feature_order": list(FEATURE_ORDER),
-        "n_train": int(len(X)),
+        "n_train": len(X),
         "silhouette": float(silhouette),
         "pca_explained_variance": pca_var,
     }

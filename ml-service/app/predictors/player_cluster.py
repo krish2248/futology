@@ -36,7 +36,7 @@ class TrainedPlayerClusterer:
     n_train: int
 
     @classmethod
-    def load(cls, path: Path) -> "TrainedPlayerClusterer":
+    def load(cls, path: Path) -> TrainedPlayerClusterer:
         artefact = joblib.load(path)
         return cls(
             scaler=artefact["scaler"],

@@ -224,7 +224,13 @@ def _collect_reactions(
 
 def analyze(req: SentimentRequest) -> SentimentResponse:
     """Synthetic deterministic sentiment snapshot. Bible §9.3 wire shape."""
-    rnd = _seeded(req.fixture_id * 1_000_003 + req.minute * 31 + req.home_score * 7 + req.away_score)
+    seed = (
+        req.fixture_id * 1_000_003
+        + req.minute * 31
+        + req.home_score * 7
+        + req.away_score
+    )
+    rnd = _seeded(seed)
 
     timeline = _build_timeline(req, rnd)
     home_mood = round(sum(p.home for p in timeline) / len(timeline), 3)

@@ -225,7 +225,6 @@ def main() -> int:
     X_test_s = scaler.transform(X_test)
 
     y_train_log = np.log1p(y_train.to_numpy())
-    y_test_log = np.log1p(y_test.to_numpy())
 
     print("-> Fitting median regressor (reg:squarederror)")
     median_model = _fit_quantile(X_train_s, y_train_log, alpha=None)
@@ -237,12 +236,15 @@ def main() -> int:
     # Holdout metrics in EUR (back-transform from log space)
     median_pred = np.expm1(median_model.predict(X_test_s))
     mae = mean_absolute_error(y_test, median_pred)
+    ss_res = ((y_test - median_pred) ** 2).sum()
+    ss_tot = ((y_test - y_test.mean()) ** 2).sum()
+    r2 = 1 - ss_res / ss_tot
     print()
     print(f"=== Holdout metrics ({len(X_test)} players) ===")
     print(f"  median MAE: EUR {mae:,.0f}")
-    print(f"  median R²:  {1 - ((y_test - median_pred) ** 2).sum() / ((y_test - y_test.mean()) ** 2).sum():.3f}")
+    print(f"  median R2:  {r2:.3f}")
 
-    # Coverage — how often the true value falls inside [p10, p90]?
+    # Coverage - how often the true value falls inside [p10, p90]?
     p10_pred = np.expm1(p10_model.predict(X_test_s))
     p90_pred = np.expm1(p90_model.predict(X_test_s))
     coverage = float(((y_test >= p10_pred) & (y_test <= p90_pred)).mean())
@@ -254,8 +256,8 @@ def main() -> int:
         "p10_model": p10_model,
         "p90_model": p90_model,
         "feature_order": list(FEATURE_ORDER),
-        "n_train": int(len(X_train)),
-        "n_test": int(len(X_test)),
+        "n_train": len(X_train),
+        "n_test": len(X_test),
         "test_mae_eur": float(mae),
         "band_coverage": coverage,
     }

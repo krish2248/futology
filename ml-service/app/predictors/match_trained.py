@@ -28,7 +28,6 @@ import shap
 
 from app.schemas import PredictMatchRequest, PredictMatchResponse, Winner
 
-
 # When the request doesn't carry any club-form context, fall back to
 # neutral midtable averages so the model still has something to score.
 # Derived from training-set means; revisit in v0.4 once Phase 2's
@@ -86,7 +85,7 @@ class TrainedMatchPredictor:
     n_train: int
 
     @classmethod
-    def load(cls, path: Path) -> "TrainedMatchPredictor":
+    def load(cls, path: Path) -> TrainedMatchPredictor:
         artifact = joblib.load(path)
         # `base_xgb` is the bare XGBClassifier from the v0.3 artefact.
         # Older v0.2 artefacts didn't carry it — error out clearly so
