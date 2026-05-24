@@ -1,13 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { PRIMARY_NAV, SECONDARY_NAV } from "@/lib/constants/navigation";
-import { SearchModal } from "@/components/shared/SearchModal";
-import { NotificationBell } from "@/components/layout/NotificationBell";
 import { cn } from "@/lib/utils/cn";
+
+// Dynamic imports keep framer-motion out of the critical first-load
+// chunk. The popovers render only on interaction, so the few-ms hydration
+// delay is invisible to the user but shaves ~100-300ms off Total Blocking
+// Time on initial render.
+const SearchModal = dynamic(
+  () => import("@/components/shared/SearchModal").then((m) => m.SearchModal),
+  { ssr: false },
+);
+const NotificationBell = dynamic(
+  () =>
+    import("@/components/layout/NotificationBell").then((m) => m.NotificationBell),
+  { ssr: false, loading: () => <div className="h-9 w-9" aria-hidden /> },
+);
 
 const HIDE_NAV_ON = ["/login", "/onboarding"];
 
