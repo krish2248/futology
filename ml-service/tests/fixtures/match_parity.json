@@ -1,0 +1,204 @@
+{
+  "generatedBy": "futology/scripts/generate_predictor_fixture.ts",
+  "note": "Regenerate via `npx tsx scripts/generate_predictor_fixture.ts` after any intentional change to lib/ml/predictor.ts.",
+  "cases": [
+    {
+      "homeId": 541,
+      "awayId": 529,
+      "competitionId": 140,
+      "homeShortName": "Real Madrid",
+      "awayShortName": "Barcelona",
+      "leagueShortName": "LaLiga",
+      "leagueTier": "elite",
+      "expected": {
+        "homeWinProb": 46,
+        "drawProb": 11,
+        "awayWinProb": 43,
+        "predictedScore": "3-2",
+        "confidence": 46,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Barcelona fatigued: 4 matches in 12 days.",
+          "Real Madrid won 4 of last 5 home matches in LaLiga.",
+          "Barcelona on a 3-match unbeaten run on the road."
+        ]
+      }
+    },
+    {
+      "homeId": 50,
+      "awayId": 33,
+      "competitionId": 39,
+      "homeShortName": "Man City",
+      "awayShortName": "Man Utd",
+      "leagueShortName": "EPL",
+      "leagueTier": "elite",
+      "expected": {
+        "homeWinProb": 43,
+        "drawProb": 21,
+        "awayWinProb": 36,
+        "predictedScore": "3-2",
+        "confidence": 43,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Man Utd on a 3-match unbeaten run on the road.",
+          "Man City press intensity (PPDA) one of league's lowest — they suffocate possession.",
+          "Head-to-head favors Man City (3W 1D 1L last 5)."
+        ]
+      }
+    },
+    {
+      "homeId": 157,
+      "awayId": 165,
+      "competitionId": 78,
+      "homeShortName": "Bayern",
+      "awayShortName": "Dortmund",
+      "leagueShortName": "Bundesliga",
+      "leagueTier": "elite",
+      "expected": {
+        "homeWinProb": 46,
+        "drawProb": 16,
+        "awayWinProb": 38,
+        "predictedScore": "2-1",
+        "confidence": 46,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Dortmund on a 3-match unbeaten run on the road.",
+          "Dortmund keeper's xG-prevented ranks bottom-third in league.",
+          "Bayern converts 38% of set-pieces vs league avg 19%."
+        ]
+      }
+    },
+    {
+      "homeId": 489,
+      "awayId": 505,
+      "competitionId": 135,
+      "homeShortName": "Milan",
+      "awayShortName": "Inter",
+      "leagueShortName": "Serie A",
+      "leagueTier": "elite",
+      "expected": {
+        "homeWinProb": 47,
+        "drawProb": 20,
+        "awayWinProb": 33,
+        "predictedScore": "3-2",
+        "confidence": 47,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Milan press intensity (PPDA) one of league's lowest — they suffocate possession.",
+          "Inter keeper's xG-prevented ranks bottom-third in league.",
+          "Inter on a 3-match unbeaten run on the road."
+        ]
+      }
+    },
+    {
+      "homeId": 85,
+      "awayId": 81,
+      "competitionId": 61,
+      "homeShortName": "PSG",
+      "awayShortName": "Marseille",
+      "leagueShortName": "Ligue 1",
+      "leagueTier": "elite",
+      "expected": {
+        "homeWinProb": 54.385964912280706,
+        "drawProb": 7.017543859649122,
+        "awayWinProb": 38.59649122807017,
+        "predictedScore": "2-1",
+        "confidence": 54.385964912280706,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Recent form: PSG +6 goal differential, Marseille -2.",
+          "Marseille on a 3-match unbeaten run on the road.",
+          "Marseille top scorer doubtful — 12-day knee strain."
+        ]
+      }
+    },
+    {
+      "homeId": 197,
+      "awayId": 194,
+      "competitionId": 88,
+      "homeShortName": "PSV",
+      "awayShortName": "Ajax",
+      "leagueShortName": "Eredivisie",
+      "leagueTier": "major",
+      "expected": {
+        "homeWinProb": 51.9607843137255,
+        "drawProb": 7.8431372549019605,
+        "awayWinProb": 40.19607843137255,
+        "predictedScore": "3-2",
+        "confidence": 51.9607843137255,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "PSV press intensity (PPDA) one of league's lowest — they suffocate possession.",
+          "PSV won 4 of last 5 home matches in Eredivisie.",
+          "Wet forecast favors the more direct attack — PSV's xG-on-counter is league-best."
+        ]
+      }
+    },
+    {
+      "homeId": 228,
+      "awayId": 211,
+      "competitionId": 94,
+      "homeShortName": "Sporting",
+      "awayShortName": "Benfica",
+      "leagueShortName": "Primeira",
+      "leagueTier": "major",
+      "expected": {
+        "homeWinProb": 56.481481481481474,
+        "drawProb": 7.4074074074074066,
+        "awayWinProb": 36.11111111111111,
+        "predictedScore": "3-2",
+        "confidence": 56.481481481481474,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Head-to-head favors Sporting (3W 1D 1L last 5).",
+          "Sporting won 4 of last 5 home matches in Primeira.",
+          "Benfica on a 3-match unbeaten run on the road."
+        ]
+      }
+    },
+    {
+      "homeId": 529,
+      "awayId": 541,
+      "competitionId": 140,
+      "homeShortName": "Barcelona",
+      "awayShortName": "Real Madrid",
+      "leagueShortName": "LaLiga",
+      "leagueTier": "elite",
+      "expected": {
+        "homeWinProb": 52.25225225225225,
+        "drawProb": 7.207207207207207,
+        "awayWinProb": 40.54054054054054,
+        "predictedScore": "3-2",
+        "confidence": 52.25225225225225,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Head-to-head favors Barcelona (3W 1D 1L last 5).",
+          "Real Madrid fatigued: 4 matches in 12 days.",
+          "Barcelona won 4 of last 5 home matches in LaLiga."
+        ]
+      }
+    },
+    {
+      "homeId": 165,
+      "awayId": 157,
+      "competitionId": 78,
+      "homeShortName": "Dortmund",
+      "awayShortName": "Bayern",
+      "leagueShortName": "Bundesliga",
+      "leagueTier": "elite",
+      "expected": {
+        "homeWinProb": 55.88235294117647,
+        "drawProb": 7.8431372549019605,
+        "awayWinProb": 36.27450980392157,
+        "predictedScore": "2-0",
+        "confidence": 55.88235294117647,
+        "predictedWinner": "home",
+        "keyFactors": [
+          "Bayern keeper's xG-prevented ranks bottom-third in league.",
+          "Dortmund press intensity (PPDA) one of league's lowest — they suffocate possession.",
+          "Dortmund won 4 of last 5 home matches in Bundesliga."
+        ]
+      }
+    }
+  ]
+}
