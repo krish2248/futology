@@ -25,6 +25,58 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 23 — 2026-05-24 (real-data proxy + HF Space deploy config + Supabase keys wired)
+
+**Goal:** Sonik created Supabase project `zlivysbodcgmalycetfr` and applied the schema. They sent the publishable key + project URL + HF username (`krishsoni1`) and rotated the secret keys. This session wires those into the codebase + builds the football-data.org proxy on the ML service + writes the HF Spaces deploy walkthrough so the next step is purely Sonik-side (~10 min of clicks).
+
+**Built (5 atomic commits):**
+
+*football-data.org proxy on the ML service*
+- `ml-service/app/proxy.py` — new FastAPI router with six endpoints: `/proxy/{competitions,standings,matches,teams/{id},teams/{id}/matches,scorers}`. All cached in-memory with TTLs tuned per endpoint (60s for live data, 5 min for standings/scorers, 1 hr for competitions/squads). Token never leaves the container — read from `FOOTBALL_DATA_KEY` env var on every call.
+- `pyproject.toml` — promoted `httpx` from dev to runtime so the proxy can actually make HTTP calls in production.
+- Each endpoint reshapes football-data.org's verbose payload into the lean shape the FUTOLOGY UI consumes. The reshape lives in one module so swapping providers (Sportradar / StatsBomb / API-Football) later is one module change, not a UI rewrite.
+- Auth-wise the proxy routes are intentionally unauthenticated (they're public data, just keeping the API token server-side) — the CORS allow-list is the gate.
+
+*Tests for the proxy*
+- `tests/test_proxy.py` — 7 tests, all green. Stubs `httpx.AsyncClient` so CI never hammers football-data.org. Verifies the reshape on standings / matches / teams / scorers, the 503 when `FOOTBALL_DATA_KEY` unset, the 429 passthrough on upstream rate limit, and the cache hit on the second identical request (counter shows only 1 upstream call across 2 GETs).
+- `_clean_env` fixture pops every test-env var set by sibling tests so the proxy fixtures get a clean stub-mode lifespan regardless of run order.
+
+*HF Spaces deploy scaffolding*
+- `ml-service/README_HF.md` — Hugging Face Spaces metadata block (title / emoji / sdk / app_port) + endpoint table + required-secrets list. Copied as `README.md` on the Space side.
+- `docs/HUGGINGFACE_DEPLOY.md` — full step-by-step: create the Space, push the directory via either git or drag-and-drop, set the four Space secrets (`ML_SERVICE_TOKEN`, `ML_ALLOWED_ORIGINS`, `ML_MODE=trained`, `FOOTBALL_DATA_KEY`), wait ~5 min for the Docker build, smoke-test with three curls. Includes cost guardrails section confirming the free tier covers everything we need.
+
+*Supabase keys + ML secrets in the deploy workflow*
+- `.github/workflows/deploy.yml` — `Build static export` step now exports `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` at build time. These are the publishable values (intentionally browser-safe), so they're hardcoded inline rather than going through a repo secret — one less click for the user.
+- Also wired `NEXT_PUBLIC_ML_API_URL` and `NEXT_PUBLIC_ML_API_TOKEN` via `${{ secrets.* }}`. These come from repo secrets (Sonik adds them after the HF Space is live). When empty, the front-end's auto-routers fall back to the in-bundle stubs — so the live deploy keeps working before the HF Space exists.
+- `futology/.env.example` — updated with the real Supabase URL / publishable key as the documented defaults.
+
+**Verified — full local sweep:**
+- Front-end `tsc --noEmit` ✓ clean
+- Front-end `next lint` ✓ no warnings or errors
+- ml-service `ruff check` ✓ All checks passed
+- ml-service `pytest` ✓ **39/39** in 5.43s (32 existing + 7 new proxy tests)
+
+**What Sonik does next (one-time, ~10 min):**
+
+1. **Deploy the ML service to Hugging Face Spaces** — follow `docs/HUGGINGFACE_DEPLOY.md`. Create the Space, push `ml-service/`, set the four Space secrets (including the freshly-rotated `FOOTBALL_DATA_KEY`). Wait for the Docker build.
+2. **Smoke-test** — three curls listed in the doc. Confirms `/health`, `/proxy/standings?league=PL`, `/predict-match` all return 200.
+3. **Add two GitHub Actions repo secrets** — `NEXT_PUBLIC_ML_API_URL` (the HF Space URL) and `NEXT_PUBLIC_ML_API_TOKEN` (the same value Sonik puts in the Space's `ML_SERVICE_TOKEN`). Push any commit to trigger a fresh GH Pages deploy and the front-end starts calling Railway-style — except it's Hugging Face, and free.
+
+**Project completion status (refreshed):**
+- ✅ All ML endpoints (5 trained models + 2 algorithmic) built, tested, wired
+- ✅ All front-end auto-routers (match / cluster / transfer / sentiment / fantasy) call the service when configured
+- ✅ football-data.org proxy on the ML service, ready for real fixtures / standings / squads / scorers
+- ✅ Supabase database schema applied; auth router plumbed for OTP magic-link
+- ✅ CI/CD: front-end GH Pages deploy, ML-service pytest+ruff workflow, both green
+- ⏳ One Sonik action remaining: deploy the HF Space + add two repo secrets. Everything else lights up automatically after.
+
+**Next session starts here:**
+1. Sonik confirms the HF Space is live + the two repo secrets are set.
+2. We update the front-end's `lib/api/client.ts` and hooks to consume the new proxy routes (real standings, real fixtures, real top scorers) — currently the demo data layer feeds the UI; after the swap it's real live football.
+3. Add a `useStandings` / `useScorers` / `useFixtures` real-data branch that flips on when `NEXT_PUBLIC_ML_API_URL` is set, mirroring the predictor auto-router pattern.
+
+---
+
 ### Session 22 — 2026-05-24 (Phase 2 Supabase prep + ml-service CI + readiness audit)
 
 **Goal:** Sonik asked for the entire project complete, CI/CD wired, no errors, every feature checked. Session 22 delivers the Phase 2 cutover scaffolding (so the Vercel target is one click-through away), the ml-service GitHub Actions workflow (so the back-end has CI parity with the front-end), and `PROJECT_STATUS.md` — an honest, phase-by-phase audit of what's complete vs what needs a user account.
