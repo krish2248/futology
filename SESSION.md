@@ -25,6 +25,56 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 18 — 2026-05-24 (Phase 3 v0.4 — player clusterer, bible §9.2)
+
+**Goal:** Pick up Phase 3 v0.4 (player clusterer) since the Railway deploy is still parked. KMeans+PCA on per-90 stats, 6 named profiles, working endpoint, committed pickle.
+
+**Built (7 atomic commits):**
+
+*Shared cluster vocabulary*
+- `app/cluster_profiles.py` — single source of truth for the 6 bible §9.2 profiles. Each profile has `id` (kebab-case, matches `futology/lib/data/playerClusters.ts`), `name`, `color`, `description`, and an `ideal` per-90 feature vector that doubles as the synthetic-data prior and the post-fit name anchor. `FEATURE_ORDER` is also defined here so trainer / predictor / schema can't drift.
+- `app/schemas.py` — `PlayerClusterRequest` (10 per-90 stats, snake_case internally, camelCase on the wire to match `demoPlayerStats.ts`) + `PlayerClusterResponse` (`clusterId`, `clusterName`, `color`, `pcaX`, `pcaY`, `confidence`). Also exported `ClusterId` Literal for typing.
+
+*Synthetic-data trainer — `train_clusterer.py`*
+- 360 samples (60 per profile) sampled from `Normal(ideal, 0.18 * |ideal|)`, clipped non-negative + pass accuracy capped at 100. Real FBref pulls in v0.5 will replace this; the synthetic prior keeps the cluster names stable across re-fits so the front-end colour map stays valid.
+- `StandardScaler -> KMeans(n_clusters=6, random_state=42, n_init=10) -> PCA(n_components=2)` per the bible spec.
+- Greedy nearest-centroid assignment maps each KMeans label (0-5) to a bible cluster id. Closest pair claimed first so two similar profiles can't both grab the same ideal.
+- Diagnostics: silhouette **0.386**, PCA explains **64.5%** of variance, synthetic-label recovery **99.2%** (sanity check, not a fitness metric). 4 KB pickle.
+
+*Trained predictor — `app/predictors/player_cluster.py`*
+- `TrainedPlayerClusterer.load(path)` reads the pickle.
+- `predict(req)` builds the row in `FEATURE_ORDER`, runs `scaler.transform -> kmeans.transform`, picks the nearest centroid, projects to PCA xy.
+- Confidence is `d_next / (d_self + d_next) * 100` — decisive assignments approach 100; boundary cases tend to 50. Honest signal, no hand-tuned thresholds.
+- `list_profiles()` exposes the static catalogue for the `/cluster-profiles` endpoint.
+
+*FastAPI wiring*
+- `app/main.py` lifespan now loads both `MATCH_PREDICTOR_PATH` (fail-loud, headline feature) and `PLAYER_CLUSTERER_PATH` (warn-only, falls back to 503 from the route). Two new routes:
+  - `GET /cluster-profiles` — unauth, returns the 6 profiles for the front-end legend. Available in stub mode too.
+  - `POST /predict-player-cluster` — bearer-auth, 503 in stub mode, real prediction in trained mode.
+- `.gitignore` exempts `trained_models/player_clusterer.pkl` so the artefact ships with the repo (4 KB — fits well under the GitHub soft limit).
+
+**Verified:**
+- `pytest -v` ✓ **22/22** in 5.52s. New cluster tests prove:
+  - Haaland-shaped stats → `target-striker` with `#FF6B6B`.
+  - Van Dijk-shaped stats → `ball-playing-defender`.
+  - Negative `goals` → 422 (input validation).
+  - Stub mode → 503 with a helpful detail message.
+- 360 synthetic-label purity 99.2% — KMeans cleanly recovers the seeded profiles when greedy-mapped through the centroid distances.
+
+**Phase 3 Progress:**
+- ✅ v0.4 — player clusterer trained + endpoint live + tests + pickle in-repo.
+- ✅ /cluster-profiles catalogue available without auth so the front-end can render the legend without round-tripping.
+- ⏳ v0.4 nearest-neighbours — deferred until we have a real player universe (Phase 2 cutover or FBref pull). Endpoint returns cluster + xy + confidence today.
+- ⏳ Railway deploy (still parked on Sonik).
+- ⏳ v0.5 — Transfer Value Regressor (bible §9.4) is the natural next ML piece.
+
+**Next session starts here:**
+1. **Railway deploy** — blocked on Sonik. Walkthrough still in Session 15 entry.
+2. Phase 3 v0.5 — Transfer Value Regressor per bible §9.4: XGBoost regressor on `log(market_value_eur)` with SHAP explanations + comparable-players list. Front-end's Transfer Oracle page mocks this in `lib/ml/transfer.ts`; the swap is a single fetch when the endpoint lands.
+3. (Alternative) Front-end swap for v0.4: have Player Pulse on the front-end POST to `/predict-player-cluster` when `NEXT_PUBLIC_ML_API_URL` is set, falling back to the seeded data otherwise (matches the `predictMatchAuto` pattern from Session 15).
+
+---
+
 ### Session 17 — 2026-05-24 (v0.3 SHAP + pickle in-repo for zero-retrain deploys)
 
 **Goal:** Burn down Session 16's "Next session starts here" #3 (SHAP integration) and #5 (commit the pickle). #1 (Railway deploy) and #2 (GH Actions secrets wiring) remain on the user.
