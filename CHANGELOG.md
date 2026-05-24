@@ -6,12 +6,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-05-24
+
+Phase 7 quality bar — Lighthouse ≥ 90, green deploy, expanded E2E. Demo-mode feature freeze; next milestone is the Supabase + Vercel real-services cutover.
+
 ### Added
-- IntelligenceSkeleton, ScoresSkeleton, PredictionsSkeleton loading components
-- `loading.tsx` for `/leagues`, `/clubs`, `/profile`, `/news`, `/intelligence`, `/scores`, `/predictions`
-- Playwright E2E specs for homepage, intelligence, navigation, predictions, scores, and auth flows
-- JSDoc coverage across hooks, stores, ML, utilities, constants, layout/shared/cards/predictions components
-- JSDoc coverage across all demo data modules (leagues, clubs, players, tournaments, matches, predictions, news, standings, leagues, community)
+- **Loading skeletons & route segments** — `IntelligenceSkeleton`, `ScoresSkeleton`, `PredictionsSkeleton`; `loading.tsx` wired for `/leagues`, `/clubs`, `/profile`, `/news`, `/intelligence`, `/scores`, `/predictions`.
+- **Reusable hooks layer** — `useDebounce`, `useMediaQuery`, `useLocalStorage`, `useClickOutside`, `useEscapeKey` (used by SearchModal, NotificationBell, MatchDetailSheet, TeamPicker, PlayerPicker).
+- **Utility helpers** — `clamp`, `formatPercent`, `pluralize`, `formatCompactNumber`, `formatTimeAgo`, `truncate`, `debounce`, plus array helpers (`chunk`, `unique`, `groupBy`, `sampleSeeded`).
+- **Architecture & deployment docs** — `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `docs/DEMO_DATA.md`, `CONTRIBUTORS.md`.
+- **Open-source repo hygiene** — `CODE_OF_CONDUCT.md`, `SECURITY.md`, GitHub issue and PR templates.
+- **Playwright E2E suite** — 40 tests across 10 spec files (homepage, intelligence, navigation, predictions, scores, auth, browse, profile, extras, smoke) with `seedAuth` helper that primes `localStorage["futology.session"]` so protected-route tests run against the real pages.
+- **Pre-deploy validator** — `scripts/check_env.ts` distinguishes demo vs real-services mode before a Vercel build.
+
+### Changed
+- **Full JSDoc coverage** across hooks, stores, ML, utilities, constants, layout/shared/cards/predictions components, and every `lib/data/*` module (`leagues`, `clubs`, `players`, `tournaments`, `demoMatches`, `demoPredictions`, `demoNews`, `demoStandings`, `demoLeagues`, `demoCommunity`, `demoMatchDetail`, `demoFantasy`, `demoTactics`, `demoPlayerStats`, `demoSentiment`, `playerClusters`, `demoMomentum`, `demoReferees`, `demoWeather`, `demoPress`, `demoInjuries`, `demoOdds`).
+- **Lighthouse Performance 78 → 97** (TBT 629 ms → 18 ms) by dynamic-importing `SearchModal`, `NotificationBell`, and `MatchDetailSheet` so framer-motion drops out of the critical first-load chunk.
+- Migrated inline click-outside / escape / debounce listeners in 5 components onto the shared hooks.
+
+### Fixed
+- **`app/offline/page.tsx`** missing `"use client"` — broke every GitHub Pages deploy since 2026-05-09 (15+ failed runs). Static export now succeeds.
+- **`app/leagues/page.tsx`** calling `useIsClient()` from a server component — hit ErrorBoundary in dev. Split into a server-component wrapper + `LeaguesView` client component.
 
 ## [0.6.0] — 2026-05-02
 
@@ -49,7 +64,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Initial Next.js scaffold with dark-only Tailwind tokens, Inter font, Phase 0 + Phase 1 shell
 - Demo email-OTP login, 3-step onboarding wizard, Cmd+K search modal, NotificationBell
 
-[Unreleased]: https://github.com/krish2248/futology/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/krish2248/futology/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/krish2248/futology/releases/tag/v0.7.0
 [0.6.0]: https://github.com/krish2248/futology/releases/tag/v0.6.0
 [0.5.0]: https://github.com/krish2248/futology/releases/tag/v0.5.0
 [0.4.0]: https://github.com/krish2248/futology/releases/tag/v0.4.0
