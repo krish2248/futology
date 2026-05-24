@@ -65,3 +65,46 @@ class HealthResponse(CamelModel):
     status: Literal["ok"]
     version: str
     mode: Literal["stub", "trained"]
+
+
+# --- Player clustering (bible §9.2) ----------------------------------------
+
+ClusterId = Literal[
+    "target-striker",
+    "creative-playmaker",
+    "box-to-box",
+    "ball-playing-defender",
+    "high-press-forward",
+    "deep-lying-playmaker",
+]
+
+
+class PlayerClusterRequest(CamelModel):
+    """Per-90 stat line for a single player to classify.
+
+    Field shape mirrors `futology/lib/data/demoPlayerStats.ts` so the
+    front-end can POST a `PlayerStatLine` directly without remapping.
+    The 10 features feed `StandardScaler -> KMeans(6) -> PCA(2)`.
+    """
+
+    name: str = Field(..., description="Display name, echoed back in the response.")
+    goals: float = Field(..., ge=0, description="Goals per 90.")
+    assists: float = Field(..., ge=0)
+    x_g: float = Field(..., ge=0, alias="xG", description="Expected goals per 90.")
+    x_a: float = Field(..., ge=0, alias="xA", description="Expected assists per 90.")
+    key_passes: float = Field(..., ge=0)
+    progressive_passes: float = Field(..., ge=0)
+    progressive_carries: float = Field(..., ge=0)
+    pressures: float = Field(..., ge=0)
+    tackles_plus_interceptions: float = Field(..., ge=0)
+    pass_accuracy: float = Field(..., ge=0, le=100, description="Pass completion %.")
+
+
+class PlayerClusterResponse(CamelModel):
+    name: str
+    cluster_id: ClusterId
+    cluster_name: str
+    color: str = Field(..., examples=["#FF6B6B"])
+    pca_x: float
+    pca_y: float
+    confidence: float = Field(..., ge=0, le=100, description="Closeness to assigned centroid (0-100).")
