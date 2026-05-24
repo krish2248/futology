@@ -25,6 +25,53 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 17 — 2026-05-24 (v0.3 SHAP + pickle in-repo for zero-retrain deploys)
+
+**Goal:** Burn down Session 16's "Next session starts here" #3 (SHAP integration) and #5 (commit the pickle). #1 (Railway deploy) and #2 (GH Actions secrets wiring) remain on the user.
+
+**Built (4 atomic commits):**
+
+*v0.3 — SHAP-derived key factors*
+- `ml-service/pyproject.toml` — `shap>=0.46,<1` added to both the `[train]` and `[runtime-model]` extras (SHAP runs at inference time so the deployed image needs it).
+- `ml-service/train.py` — also persists the bare `XGBClassifier` (`base_xgb`) alongside the `CalibratedClassifierCV`. SHAP's `TreeExplainer` wants the raw XGBoost model; otherwise it'd have to peel through `FrozenEstimator` and the calibrator wrapper at every request.
+- `ml-service/app/predictors/match_trained.py` — full rewrite of the factor path. On load, builds `TreeExplainer(artifact["base_xgb"])`. On predict, takes the SHAP value column for the *winning* class, sorts features by `|contribution|`, picks the top 3, formats each via a `FEATURE_LABELS` dict that maps internal column names to plain English. Falls back to the old heuristic when SHAP throws (defensive, since SHAP versions disagree on output shape).
+- v0.2 artefacts without `base_xgb` raise a clear "retrain with v0.3" error on load — operator intent stays explicit.
+
+*Trained model in-repo*
+- Retrained: same 10,707 matches, same 48.8% holdout accuracy / 4.785 log-loss. New artefact carries `base_xgb`.
+- `ml-service/.gitignore` — exempted `trained_models/match_predictor.pkl` specifically (3.1 MB). Other future pickles stay ignored until a release-artifact pipeline lands.
+- Committed the pickle so Railway's `docker build` no longer needs to retrain. Build time goes from "minutes plus retrain" to "seconds plus model load."
+
+**Verified:**
+- `pytest -v` ✓ **17/17** in 4.56s (added `test_trained_mode_emits_shap_factors` asserting every key factor carries a `"SHAP contribution"` substring).
+- Live boot in trained mode: `POST /predict-match {homeId:541, awayId:529, ...}` now returns factors like:
+  - `"Elo rating differential favours BAR (SHAP contribution +0.20)."`
+  - `"Head-to-head wins for the home side favours BAR (SHAP contribution +0.05)."`
+  - `"Away team's shots-on-target rate argues against BAR (SHAP contribution -0.04)."`
+
+**Phase 3 Progress:**
+- ✅ v0.3 — SHAP-derived explanations live; v0.2's heuristic templates retired.
+- ✅ Trained model versioned with the code; Railway can build & boot without the training stack.
+- ⏳ Railway deploy still blocked on Sonik.
+- ⏳ Per-club form features (the trained model still feeds neutral midtable inputs) — needs Phase 2 cutover or an API-Football proxy.
+- ⏳ v0.4-0.6 — player clusterer, transfer value regressor, sentiment, fantasy optimizer.
+
+**Completion estimate (re-checked after Session 17):**
+
+| Cut | Remaining sessions | What |
+|-----|-------------------|------|
+| **A — demo-complete + ML live on Railway** | **~1 session** | Railway deploy (your action), GH Actions secrets wiring, verify live |
+| **B — bible-spec full real services** | **~6-8 sessions** | Phase 2 cutover (Supabase + RapidAPI proxies, ~3 sessions) + Phase 3 v0.4-0.6 (clustering / transfer / sentiment / fantasy, ~3 sessions) + Resend email digest + polish |
+
+We're at ~88% on the bible. Remaining work is real-services plumbing, not new features.
+
+**Next session starts here:**
+1. **Railway deploy** — still blocked on Sonik. Walkthrough in Session 15 entry. The committed `trained_models/match_predictor.pkl` means the Docker image just needs `ML_MODE=trained` and it boots into v0.3 mode.
+2. Once Railway returns a URL, add `NEXT_PUBLIC_ML_API_URL` (and optionally `NEXT_PUBLIC_ML_API_TOKEN`) as GitHub Actions repo secrets, expose them in the deploy workflow's `env:` block, redeploy, and confirm the live Match Predictor calls Railway.
+3. Phase 3 v0.4 — player clusterer (bible §9.2). KMeans + PCA on per-90 stats; bible already names the 6 cluster profiles and colours. Front-end's Player Pulse cluster scatter is mocked from `lib/data/playerClusters.ts`; v0.4 swaps that for `/predict-player-cluster` POSTing the player's per-90 vector.
+
+---
+
 ### Session 16 — 2026-05-24 (v0.2 ML — parity test, real XGBoost, trained route)
 
 **Goal:** Burn down Session 15's "Next session starts here" items #2 (kick off v0.2 — real XGBoost training) and #3 (TS/Python parity test). Item #1 (Railway env wiring) stays parked until Sonik finishes the Railway deploy from Session 15.
