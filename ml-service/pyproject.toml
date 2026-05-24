@@ -38,6 +38,7 @@ train = [
     "joblib>=1.4,<2",
     "requests>=2.32,<3",
     "shap>=0.46,<1",
+    "pulp>=2.9,<4",
 ]
 # Runtime needs joblib to deserialize the pickle. Pulled into base
 # rather than `train` so Railway can load the model without the rest.
@@ -48,6 +49,7 @@ runtime-model = [
     "scikit-learn>=1.5,<2",
     "xgboost>=2.1,<4",
     "shap>=0.46,<1",
+    "pulp>=2.9,<4",
 ]
 
 [tool.hatch.build.targets.wheel]
