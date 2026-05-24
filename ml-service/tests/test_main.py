@@ -264,6 +264,86 @@ def test_predict_player_cluster_validates_input(client: TestClient) -> None:
     assert res.status_code == 422
 
 
+TRANSFER_BODY_FORWARD = {
+    "name": "K. Mbappé",
+    "position": "FWD",
+    "age": 26,
+    "goalsPer90": 0.85,
+    "assistsPer90": 0.32,
+    "xGPer90": 0.78,
+    "xAPer90": 0.28,
+    "passAccuracy": 82,
+    "minutesPlayed": 2800,
+    "leagueLevel": 1,
+}
+
+
+TRANSFER_BODY_AGING_DEFENDER = {
+    "name": "S. Ramos",
+    "position": "DEF",
+    "age": 38,
+    "goalsPer90": 0.10,
+    "assistsPer90": 0.04,
+    "xGPer90": 0.12,
+    "xAPer90": 0.05,
+    "passAccuracy": 88,
+    "minutesPlayed": 1800,
+    "leagueLevel": 3,
+}
+
+
+def test_predict_transfer_value_503_in_stub_mode(client: TestClient) -> None:
+    res = client.post("/predict-transfer-value", json=TRANSFER_BODY_FORWARD)
+    assert res.status_code == 503
+    assert "not loaded" in res.json()["detail"]
+
+
+def test_predict_transfer_value_happy_path() -> None:
+    from pathlib import Path as _Path
+
+    src = _Path(__file__).resolve().parent.parent / "trained_models" / "transfer_value.pkl"
+    if not src.exists():
+        pytest.skip("No transfer artefact; run `python train_transfer.py` first.")
+
+    app = _build_app(env={"ML_MODE": "trained", "TRANSFER_VALUE_PATH": str(src)})
+    with TestClient(app) as trained:
+        res = trained.post("/predict-transfer-value", json=TRANSFER_BODY_FORWARD)
+        assert res.status_code == 200, res.text
+        body = res.json()
+
+        # Sane band ordering.
+        assert body["lowEstimate"] <= body["predictedValueEur"] <= body["highEstimate"]
+        assert body["predictedValueEur"] > 0
+
+        # SHAP factors present and bounded.
+        assert 1 <= len(body["shapFactors"]) <= 5
+        for f in body["shapFactors"]:
+            assert isinstance(f["label"], str) and f["label"]
+            assert isinstance(f["contribution"], (int, float))
+
+
+def test_predict_transfer_value_aging_defender_under_forward() -> None:
+    """Sanity: a 38yo defender in a tier-3 league should be valued
+    well below a 26yo elite-tier forward with high goal output."""
+    from pathlib import Path as _Path
+
+    src = _Path(__file__).resolve().parent.parent / "trained_models" / "transfer_value.pkl"
+    if not src.exists():
+        pytest.skip("No transfer artefact; run `python train_transfer.py` first.")
+
+    app = _build_app(env={"ML_MODE": "trained", "TRANSFER_VALUE_PATH": str(src)})
+    with TestClient(app) as trained:
+        fwd = trained.post("/predict-transfer-value", json=TRANSFER_BODY_FORWARD).json()
+        defn = trained.post("/predict-transfer-value", json=TRANSFER_BODY_AGING_DEFENDER).json()
+        assert fwd["predictedValueEur"] > defn["predictedValueEur"]
+
+
+def test_predict_transfer_value_validates_input(client: TestClient) -> None:
+    bad = {**TRANSFER_BODY_FORWARD, "passAccuracy": 120}  # >100 violates le=100
+    res = client.post("/predict-transfer-value", json=bad)
+    assert res.status_code == 422
+
+
 def test_trained_mode_without_artefact_fails_loudly(tmp_path) -> None:
     """ML_MODE=trained but no model file -> startup raises, no silent fallback."""
     bogus = tmp_path / "missing.pkl"
