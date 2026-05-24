@@ -168,6 +168,102 @@ def test_trained_mode_emits_shap_factors() -> None:
         assert any("SHAP contribution" in f for f in factors), factors
 
 
+CLUSTER_BODY_STRIKER = {
+    "name": "E. Haaland",
+    "goals": 0.85,
+    "assists": 0.18,
+    "xG": 0.78,
+    "xA": 0.15,
+    "keyPasses": 1.0,
+    "progressivePasses": 3.5,
+    "progressiveCarries": 2.8,
+    "pressures": 7.5,
+    "tacklesPlusInterceptions": 0.9,
+    "passAccuracy": 76.0,
+}
+
+
+CLUSTER_BODY_DEFENDER = {
+    "name": "V. van Dijk",
+    "goals": 0.05,
+    "assists": 0.04,
+    "xG": 0.07,
+    "xA": 0.05,
+    "keyPasses": 0.4,
+    "progressivePasses": 9.2,
+    "progressiveCarries": 2.9,
+    "pressures": 11.0,
+    "tacklesPlusInterceptions": 4.6,
+    "passAccuracy": 90.5,
+}
+
+
+def test_cluster_profiles_route_no_auth(client: TestClient) -> None:
+    res = client.get("/cluster-profiles")
+    assert res.status_code == 200
+    profiles = res.json()["profiles"]
+    assert len(profiles) == 6
+    ids = {p["id"] for p in profiles}
+    assert ids == {
+        "target-striker",
+        "creative-playmaker",
+        "box-to-box",
+        "ball-playing-defender",
+        "high-press-forward",
+        "deep-lying-playmaker",
+    }
+
+
+def test_predict_player_cluster_503_in_stub_mode(client: TestClient) -> None:
+    res = client.post("/predict-player-cluster", json=CLUSTER_BODY_STRIKER)
+    assert res.status_code == 503
+    assert "not loaded" in res.json()["detail"]
+
+
+def test_predict_player_cluster_assigns_striker() -> None:
+    from pathlib import Path as _Path
+
+    src = _Path(__file__).resolve().parent.parent / "trained_models" / "player_clusterer.pkl"
+    if not src.exists():
+        pytest.skip("No clusterer artefact; run `python train_clusterer.py` first.")
+
+    app = _build_app(
+        env={
+            "ML_MODE": "trained",
+            "PLAYER_CLUSTERER_PATH": str(src),
+        }
+    )
+    with TestClient(app) as trained:
+        res = trained.post("/predict-player-cluster", json=CLUSTER_BODY_STRIKER)
+        assert res.status_code == 200, res.text
+        body = res.json()
+        assert body["clusterId"] == "target-striker"
+        assert body["color"] == "#FF6B6B"
+        assert 0 <= body["confidence"] <= 100
+
+
+def test_predict_player_cluster_assigns_defender() -> None:
+    from pathlib import Path as _Path
+
+    src = _Path(__file__).resolve().parent.parent / "trained_models" / "player_clusterer.pkl"
+    if not src.exists():
+        pytest.skip("No clusterer artefact; run `python train_clusterer.py` first.")
+
+    app = _build_app(env={"ML_MODE": "trained", "PLAYER_CLUSTERER_PATH": str(src)})
+    with TestClient(app) as trained:
+        res = trained.post("/predict-player-cluster", json=CLUSTER_BODY_DEFENDER)
+        assert res.status_code == 200, res.text
+        body = res.json()
+        assert body["clusterId"] == "ball-playing-defender"
+
+
+def test_predict_player_cluster_validates_input(client: TestClient) -> None:
+    # Negative goals violate ge=0 -> 422
+    bad = {**CLUSTER_BODY_STRIKER, "goals": -0.1}
+    res = client.post("/predict-player-cluster", json=bad)
+    assert res.status_code == 422
+
+
 def test_trained_mode_without_artefact_fails_loudly(tmp_path) -> None:
     """ML_MODE=trained but no model file -> startup raises, no silent fallback."""
     bogus = tmp_path / "missing.pkl"
