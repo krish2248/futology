@@ -144,7 +144,7 @@ export function LiveStrip({
       <div className="flex snap-x gap-3 pb-2">
         {matches.map((m) => (
           <div key={m.id} className="w-72 shrink-0 snap-start">
-            {onSelect ? (
+            {onSelect && m.detailAvailable !== false ? (
               <button
                 type="button"
                 onClick={() => onSelect(m)}
