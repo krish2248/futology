@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { getStandingsAuto } from "@/lib/api/standingsAuto";
 import { getScorersAuto } from "@/lib/api/scorersAuto";
+import { getFixturesAuto } from "@/lib/api/fixturesAuto";
 import type { MatchStatus } from "@/lib/data/demoMatches";
 
 const LIVE_POLL_MS = 30_000;
@@ -18,7 +19,7 @@ const FIXTURES_STALE_MS = 5 * 60_000;
 export function useLiveScores() {
   return useQuery({
     queryKey: ["football", "live-scores"],
-    queryFn: () => api.liveScores({ status: "live" }),
+    queryFn: () => getFixturesAuto({ status: "live" }),
     refetchInterval: LIVE_POLL_MS,
     refetchIntervalInBackground: false,
     staleTime: 0,
@@ -36,7 +37,7 @@ export function useFixtures(params?: {
 }) {
   return useQuery({
     queryKey: ["football", "fixtures", params],
-    queryFn: () => api.fixtures(params),
+    queryFn: () => getFixturesAuto(params),
     staleTime: FIXTURES_STALE_MS,
   });
 }
