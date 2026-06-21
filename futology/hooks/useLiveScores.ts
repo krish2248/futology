@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
+import { getStandingsAuto } from "@/lib/api/standingsAuto";
 import type { MatchStatus } from "@/lib/data/demoMatches";
 
 const LIVE_POLL_MS = 30_000;
@@ -53,12 +54,17 @@ export function useMatchDetail(fixtureId: number | null) {
 
 /**
  * Fetches the standings table for a given league ID.
- * Cached for 5 minutes since standings change at most once per match-day.
+ *
+ * Routes through `getStandingsAuto`, which hits the ML-service
+ * football-data.org proxy for real tables when `NEXT_PUBLIC_ML_API_URL`
+ * is set and the league is on the free tier, and otherwise serves the
+ * seeded demo standings. Cached for 5 minutes since standings change at
+ * most once per match-day.
  */
 export function useStandings(leagueId: number) {
   return useQuery({
     queryKey: ["football", "standings", leagueId],
-    queryFn: () => api.standings(leagueId),
+    queryFn: () => getStandingsAuto(leagueId),
     staleTime: 5 * 60_000,
   });
 }
