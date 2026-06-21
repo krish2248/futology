@@ -28,3 +28,20 @@ export const FOOTBALL_DATA_CODE: Record<number, string> = {
 export function footballDataCode(leagueId: number): string | undefined {
   return FOOTBALL_DATA_CODE[leagueId];
 }
+
+/** Reverse of `FOOTBALL_DATA_CODE`: football-data code → API-Football ID. */
+const LEAGUE_ID_BY_CODE: Record<string, number> = Object.fromEntries(
+  Object.entries(FOOTBALL_DATA_CODE).map(([id, code]) => [code, Number(id)]),
+);
+
+/**
+ * Returns the API-Football league ID for a football-data.org competition
+ * code (e.g. `"PL"` → `39`), or `undefined` for unmapped codes. Used to tag
+ * proxy fixtures with the canonical league ID the front-end understands.
+ */
+export function leagueIdFromCode(code: string): number | undefined {
+  return LEAGUE_ID_BY_CODE[code];
+}
+
+/** Every football-data code the proxy can serve, e.g. for a batched fixtures call. */
+export const ALL_FOOTBALL_DATA_CODES: string[] = Object.values(FOOTBALL_DATA_CODE);
