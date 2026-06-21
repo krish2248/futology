@@ -21,8 +21,8 @@ COPY app ./app
 # Dockerfile copy is safe even when `trained_models/` is empty.
 COPY trained_models ./trained_models
 
-# Railway injects $PORT at runtime. Default to 8080 for local `docker run`.
-ENV PORT=8080
-EXPOSE 8080
+# HF Spaces expects 7860; Railway injects $PORT at runtime.
+ENV PORT=7860
+EXPOSE 7860
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]
