@@ -16,6 +16,13 @@ export type DemoMatch = {
   homeScore?: number;
   awayScore?: number;
   venue?: string;
+  /**
+   * Whether a full match-detail view exists for this fixture. Demo matches
+   * have hand-built detail (stats/lineups/events/H2H); real proxy fixtures
+   * don't (football-data.org's free tier doesn't carry that depth), so they
+   * set this `false` and the UI skips the detail drill-down.
+   */
+  detailAvailable?: boolean;
 };
 
 const VENUES: Record<number, string> = {
