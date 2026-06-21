@@ -25,6 +25,46 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 25 — 2026-06-21 (top-scorers real-data wiring + league page tabs)
+
+**Goal:** Continue the Session 24 plan. Standings verification (item #1) is
+still blocked — the HF Space secrets remain unset (`/health` → `mode:"stub"`,
+`/proxy/scorers?league=PL` → 503), so this session did the code task that
+doesn't depend on them: scorers, end-to-end.
+
+**Built (scorers, mirroring the standings Auto-router pattern):**
+- `futology/lib/data/demoScorers.ts` — `getDemoScorers(leagueId)`: a
+  deterministic 12-deep top-scorers chart. Real attacking stars from
+  `players.ts` who play in the league go to the top; the rest are synthetic
+  entries spread across the league's clubs. Seeded by `leagueId`. Shape
+  (`ScorerRow`) matches the ML-service `/proxy/scorers` reshape.
+- `futology/lib/api/scorersAuto.ts` — `getScorersAuto(leagueId)`: hits
+  `GET /proxy/scorers?league=<CODE>` when `NEXT_PUBLIC_ML_API_URL` is set and
+  the league is on the free tier, reshapes into `ScorerRow[]`, falls back to
+  demo on any proxy error.
+- `futology/hooks/useLiveScores.ts` — added `useScorers(leagueId)`.
+- `futology/components/cards/ScorersTable.tsx` — top-scorers chart, same look
+  as `StandingsTable` (goals headline; assists/pens/apps behind breakpoints).
+- `futology/app/leagues/[leagueId]/LeagueDetailView.tsx` — added a
+  **Standings / Top Scorers** tab toggle; each panel has its own loading /
+  error / empty states.
+
+**Verified:** `tsc --noEmit` ✓ · `next lint` ✓ · `next build` ✓ (116 routes).
+
+**Committed:** 5 per-file commits + this log entry, pushed to `origin/main`.
+
+**Still Sonik's action (unchanged from Session 24):** 4 HF Space secrets +
+2 GitHub repo secrets (see Session 24 entry). Until they're set, both
+standings and scorers serve demo data on the live site.
+
+**Next session (Session 26) starts here:**
+1. Once the secrets land, open `/leagues/39` and confirm both tabs show real
+   PL data (standings + golden-boot chart).
+2. Tackle the API-Football ↔ football-data **team-ID cross-walk** so fixtures
+   can move to real data without breaking the SSG club/player pages.
+
+---
+
 ### Session 24 — 2026-06-21 (HF Space deploy fix — live — + standings real-data wiring)
 
 **Goal:** Resume from the Session 23 checkpoint. The plan assumed the only
