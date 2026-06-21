@@ -1,62 +1,52 @@
-# FUTOLOGY ML service
+---
+title: FUTOLOGY ML
+emoji: ⚽
+colorFrom: green
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: ML + football-data proxy for FUTOLOGY
+---
 
-Python microservice that powers FUTOLOGY's match prediction, player
-clustering, sentiment, transfer values, and fantasy optimization. Sits
-behind the Next.js front-end at [`futology/`](../futology) and is called
-via `MATCH_PREDICT_URL` + bearer auth.
+# FUTOLOGY ML
 
-**Status:** v0.1 — stub `/predict-match` returns a deterministic seeded
-distribution that mirrors `futology/lib/ml/predictor.ts`. The trained
-XGBoost classifier (bible §9.1) lands in v0.2; the request/response
-contract stays identical so the front-end swap is invisible to users.
+Real-time match prediction, player clustering, transfer valuation,
+sentiment, and fantasy optimisation behind one FastAPI service.
 
-## Quick start (Windows / PowerShell)
+Front-end: [`futology`](https://github.com/krish2248/futology) →
+[`https://krish2248.github.io/futology`](https://krish2248.github.io/futology).
 
-```powershell
-cd ml-service
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
-uvicorn app.main:app --reload --port 8000
-```
+## Endpoints
 
-Then:
+| Path | What |
+|---|---|
+| `GET /health` | Liveness + which mode (`stub` / `trained`) is active |
+| `POST /predict-match` | XGBoost + isotonic calibration + SHAP factors (bible §9.1) |
+| `POST /predict-player-cluster` | KMeans + PCA, 6 named profiles (bible §9.2) |
+| `GET /cluster-profiles` | The 6 canonical profiles (id, name, colour, description) |
+| `POST /predict-transfer-value` | Quantile XGBoost triple + SHAP in EUR (bible §9.4) |
+| `POST /sentiment-analyze` | Synthetic seeded sentiment snapshot (bible §9.3) |
+| `POST /fantasy-optimize` | PuLP integer LP with budget / 2-5-5-3 / max-3-per-club (bible §9.5) |
+| `GET /proxy/competitions` | football-data.org competitions (cached 1 hr) |
+| `GET /proxy/standings?league=PL` | Current league table (cached 5 min) |
+| `GET /proxy/matches` | Fixtures with status / competition / date filters (cached 60 s) |
+| `GET /proxy/teams/{id}` | Team detail + current squad (cached 1 hr) |
+| `GET /proxy/teams/{id}/matches` | Team's recent and upcoming matches (cached 60 s) |
+| `GET /proxy/scorers?league=PL` | Top scorers in a competition (cached 5 min) |
 
-```powershell
-# health
-curl http://localhost:8000/health
+## Required secrets
 
-# stub prediction (no auth in local dev when ML_SERVICE_TOKEN is unset)
-curl -X POST http://localhost:8000/predict-match `
-  -H "Content-Type: application/json" `
-  -d '{"homeId":541,"awayId":529,"competitionId":140,"homeShortName":"RMA","awayShortName":"BAR","leagueShortName":"La Liga"}'
-```
+Add via the Space's **Settings → Variables and secrets**:
 
-## API
+| Name | Required? | Purpose |
+|---|---|---|
+| `ML_SERVICE_TOKEN` | recommended | Bearer auth for the prediction endpoints. Leave unset only for local dev. |
+| `ML_ALLOWED_ORIGINS` | recommended | Comma-separated origins allowed by CORS. Default includes localhost + GitHub Pages. |
+| `ML_MODE` | optional | `trained` to enable the calibrated XGBoost predictors. Defaults to `stub`. |
+| `FOOTBALL_DATA_KEY` | required for /proxy/* | Token from [football-data.org](https://www.football-data.org). Free 10 req/min. |
 
-| Method | Path             | Auth         | Notes                       |
-| ------ | ---------------- | ------------ | --------------------------- |
-| GET    | `/health`        | none         | Liveness probe.             |
-| POST   | `/predict-match` | Bearer token | Stub today, XGBoost in v0.2 |
-
-Request and response shapes live in [`app/schemas.py`](app/schemas.py).
-All JSON is camelCase to match `futology/lib/ml/predictor.ts` exactly.
-
-## Deploy
-
-Railway picks up the `Dockerfile` automatically. Required env vars on
-Railway:
-
-- `ML_SERVICE_TOKEN` — shared secret the front-end sends as
-  `Authorization: Bearer …`. Generate with
-  `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
-- `ML_ALLOWED_ORIGINS` — comma-separated; e.g.
-  `https://krish2248.github.io,https://futology.vercel.app`.
-
-## Roadmap
-
-- v0.2 — trained `XGBClassifier` for `/predict-match` (bible §9.1).
-- v0.3 — KMeans player clusterer + PCA (bible §9.2).
-- v0.4 — Transfer value regressor + SHAP (bible §9.4).
-- v0.5 — Sentiment pipeline (Reddit + RoBERTa) (bible §9.3).
-- v0.6 — PuLP fantasy optimizer (bible §9.5).
+The trained model artefacts ship in-repo under `trained_models/` so no
+training is needed at boot time. `ML_MODE=trained` flips the predictors
+over; without it the service serves seeded synthetic predictions.
