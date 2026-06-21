@@ -25,6 +25,58 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 26 — 2026-06-21 (fixtures real-data wiring + team-ID cross-walk)
+
+**Goal:** The deferred item from Sessions 24-25 — wire fixtures to the
+football-data.org proxy. The blocker was the API-Football ↔ football-data
+team-ID mismatch; this session builds the cross-walk and wires fixtures
+behind it. (Secrets still unset, so the live site keeps serving demo data.)
+
+**Built:**
+- `futology/lib/data/teamCrosswalk.ts` — `resolveClub(fdId, name)`: football-
+  data team ID → seeded `ClubSeed`, with a normalized-name fallback. Explicit
+  ID map for all ~43 seeded clubs across the 7 mapped leagues.
+- `futology/lib/data/footballDataCodes.ts` — added `leagueIdFromCode()` (reverse
+  of the code map) + `ALL_FOOTBALL_DATA_CODES` for a batched fixtures call.
+- `futology/lib/data/demoMatches.ts` — `DemoMatch` gains an optional
+  `detailAvailable` flag.
+- `futology/lib/api/fixturesAuto.ts` — `getFixturesAuto(params)`: hits
+  `GET /proxy/matches` (all free-tier competitions, −2…+7 day window) when
+  `NEXT_PUBLIC_ML_API_URL` is set, reshapes to `DemoMatch[]` (status mapping
+  IN_PLAY/PAUSED→live, FINISHED→finished, else scheduled; teams via the
+  cross-walk), tags them `detailAvailable: false`. Team-filtered lookups (the
+  club page) stay on demo — no reverse cross-walk yet. Any proxy error falls
+  back to demo.
+- `futology/hooks/useLiveScores.ts` — `useFixtures` and `useLiveScores` now
+  route through `getFixturesAuto`.
+- `futology/components/cards/MatchCard.tsx` + `app/scores/ScoresView.tsx` —
+  the detail sheet is gated on `detailAvailable`: real fixtures render as
+  static cards (no drill-down), since football-data's free tier doesn't carry
+  the stats/lineups/events the 5-tab MatchDetailSheet needs. Demo matches stay
+  fully clickable.
+
+**Verified:** `tsc` ✓ · `next lint` ✓ · `next build` ✓ (116 routes) ·
+Playwright **40/40** (demo-mode behaviour unchanged).
+
+**Known degradation when real data is on (acknowledged):** the predictions
+auto-settlement loop matches on demo match IDs, so it won't settle against
+real fixtures. Predictions remain a demo-only feature until the Supabase
+cutover, so this is acceptable for now.
+
+**Still Sonik's action (unchanged):** 4 HF Space secrets + 2 GitHub repo
+secrets (see Session 24). Until set, standings, scorers, and fixtures all
+serve demo data on the live site.
+
+**Next session (Session 27) starts here:**
+1. Once the secrets land, smoke-test the live site: `/scores` (real fixtures,
+   no drill-down), `/` live strip, `/leagues/39` (real standings + scorers).
+2. Optional polish: reverse cross-walk so the club page's per-team fixtures
+   can use real data via `/proxy/teams/{id}/matches`.
+3. Consider a minimal real MatchDetail (overview only) so real fixtures can
+   regain a basic drill-down.
+
+---
+
 ### Session 25 — 2026-06-21 (top-scorers real-data wiring + league page tabs)
 
 **Goal:** Continue the Session 24 plan. Standings verification (item #1) is
