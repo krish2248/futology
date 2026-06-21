@@ -25,6 +25,72 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 24 — 2026-06-21 (HF Space deploy fix — live — + standings real-data wiring)
+
+**Goal:** Resume from the Session 23 checkpoint. The plan assumed the only
+remaining work was Sonik's secret-setting, but the HF Space was actually
+**stuck in an error state** — so the first job was diagnosing and fixing the
+deploy, then doing the Session 24 code task (front-end → proxy wiring).
+
+**Fixed the HF Space (it's now LIVE):**
+- Root cause: the Space's `app_port` is **7860**, but the committed Dockerfile
+  made uvicorn `EXPOSE`/serve on **8080**. HF routed traffic to 7860, nothing
+  answered, the health check failed → Space errored.
+- Committed the port fix (ENV PORT / EXPOSE / CMD → 7860) to the `hf` git
+  remote (commit `b2dc739`) and pushed. The Space rebuilt healthy.
+- `GET https://krishsoni1-futology.hf.space/health` → `200 {"status":"ok",
+  "version":"0.1.0","mode":"stub"}`.
+
+**Confirmed the Space is running on defaults — all secrets still unset:**
+- `mode:"stub"` → `ML_MODE` not set
+- `/proxy/standings?league=PL` → **503** "FOOTBALL_DATA_KEY not configured"
+- `/predict-match` → **200 with no auth** → `ML_SERVICE_TOKEN` not set
+- (`ML_ALLOWED_ORIGINS` can't be probed via curl)
+
+**Front-end standings wiring (Session 24 plan item #2):**
+- `futology/lib/data/footballDataCodes.ts` — maps API-Football league IDs to
+  football-data.org competition codes for the free-tier leagues (PL, PD, SA,
+  BL1, FL1, CL, DED, PPL, BSA). Leagues not in the map have no real-data
+  source and fall back to demo.
+- `futology/lib/api/standingsAuto.ts` — `getStandingsAuto(leagueId)`: hits
+  `GET /proxy/standings?league=<CODE>` when `NEXT_PUBLIC_ML_API_URL` is set
+  *and* the league is covered, reshapes the proxy rows into the existing
+  `StandingRow` shape (parses the comma-separated `form` string; sets
+  `prevPosition = position` since football-data carries no movement). On any
+  proxy error (e.g. 503 with no key) it **falls back to demo** so the live
+  GitHub Pages build never breaks. Mirrors the `predictMatchAuto` pattern.
+- `futology/hooks/useLiveScores.ts` — `useStandings` now routes through
+  `getStandingsAuto`. `StandingsTable` renders team names as text (no
+  club-page links), so football-data's different team-ID space is safe here.
+
+**Verified:** `tsc --noEmit` ✓ · `next lint` ✓ (no warnings/errors) ·
+`next build` ✓ (full static export, all routes prerendered).
+
+**Deferred (acknowledged):**
+- **Scorers** — proxy endpoint exists, but there's no demo scorers data or UI
+  to attach it to yet. Needs a `/leagues/[id]` scorers tab + demo fallback.
+- **Fixtures** — blocked on API-Football ↔ football-data **team-ID
+  reconciliation**: the SSG club/player pages key off API-Football IDs, so
+  swapping in football-data fixtures would break club-page navigation. Needs
+  an ID cross-walk before wiring.
+
+**Still Sonik's action (one-time, HF UI + GitHub):**
+1. Set the 4 HF Space secrets: `ML_SERVICE_TOKEN`, `ML_ALLOWED_ORIGINS`,
+   `ML_MODE=trained`, `FOOTBALL_DATA_KEY`.
+2. Set the 2 GitHub repo secrets: `NEXT_PUBLIC_ML_API_URL` =
+   `https://krishsoni1-futology.hf.space`, `NEXT_PUBLIC_ML_API_TOKEN` = the
+   same value as `ML_SERVICE_TOKEN`.
+3. Once `NEXT_PUBLIC_ML_API_URL` is live, push any commit → GH Pages rebuilds
+   and `/leagues/[id]` shows real standings for the free-tier leagues.
+
+**Next session (Session 25) starts here:**
+1. Verify standings show real data after the secrets land (open
+   `/leagues/39`).
+2. Build the scorers tab + demo fallback, then wire `getScorersAuto`.
+3. Tackle the team-ID cross-walk so fixtures can move to real data.
+
+---
+
 ### Session 23 — 2026-05-24 (real-data proxy + HF Space deploy config + Supabase keys wired)
 
 **Goal:** Sonik created Supabase project `zlivysbodcgmalycetfr` and applied the schema. They sent the publishable key + project URL + HF username (`krishsoni1`) and rotated the secret keys. This session wires those into the codebase + builds the football-data.org proxy on the ML service + writes the HF Spaces deploy walkthrough so the next step is purely Sonik-side (~10 min of clicks).
