@@ -40,7 +40,7 @@ export function ScoresView() {
     <div className="space-y-6">
       <PageHeader
         title="Scores & Fixtures"
-        description="Demo data via /api/football. Live tab refreshes every 30 seconds."
+        description="Live tab refreshes every 30 seconds."
         action={
           isFetching ? (
             <span className="text-xs text-text-muted">Refreshing…</span>
@@ -95,17 +95,21 @@ export function ScoresView() {
                 {league}
               </h2>
               <div className="grid gap-2 md:grid-cols-2">
-                {items.map((m: DemoMatch) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setOpenId(m.id)}
-                    className="text-left transition-transform active:scale-[0.99]"
-                    aria-label={`Open match details: ${m.homeTeam} vs ${m.awayTeam}`}
-                  >
-                    <MatchCard match={m} />
-                  </button>
-                ))}
+                {items.map((m: DemoMatch) =>
+                  m.detailAvailable !== false ? (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setOpenId(m.id)}
+                      className="text-left transition-transform active:scale-[0.99]"
+                      aria-label={`Open match details: ${m.homeTeam} vs ${m.awayTeam}`}
+                    >
+                      <MatchCard match={m} />
+                    </button>
+                  ) : (
+                    <MatchCard key={m.id} match={m} />
+                  ),
+                )}
               </div>
             </section>
           ))}
