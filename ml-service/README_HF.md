@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: mit
-short_description: FastAPI service powering FUTOLOGY's match predictions, player clustering, transfer values, sentiment, fantasy optimiser, and football-data.org proxy.
+short_description: ML + football-data proxy for FUTOLOGY
 ---
 
 # FUTOLOGY ML
