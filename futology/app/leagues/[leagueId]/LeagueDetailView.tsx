@@ -1,14 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useStandings } from "@/hooks/useLiveScores";
+import { useScorers, useStandings } from "@/hooks/useLiveScores";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StandingsTable } from "@/components/cards/StandingsTable";
+import { ScorersTable } from "@/components/cards/ScorersTable";
 import { ApiError } from "@/components/shared/ApiError";
+import { cn } from "@/lib/utils/cn";
+
+type Tab = "standings" | "scorers";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "standings", label: "Standings" },
+  { key: "scorers", label: "Top Scorers" },
+];
 
 export function LeagueDetailView({ leagueId }: { leagueId: number }) {
-  const { data, isLoading, isError, error, refetch } = useStandings(leagueId);
+  const [tab, setTab] = useState<Tab>("standings");
+  const standings = useStandings(leagueId);
+  const scorers = useScorers(leagueId);
+  const league = standings.data?.league;
 
   return (
     <div className="space-y-6">
@@ -20,30 +33,92 @@ export function LeagueDetailView({ leagueId }: { leagueId: number }) {
       </Link>
 
       <PageHeader
-        title={data?.league?.name ?? "League"}
-        description={data?.league ? `${data.league.country} · ${data.league.shortName}` : undefined}
+        title={league?.name ?? "League"}
+        description={league ? `${league.country} · ${league.shortName}` : undefined}
       />
 
-      {isLoading ? (
-        <div className="surface overflow-hidden">
-          <div className="space-y-1 p-3">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="skeleton h-8" />
-            ))}
-          </div>
-        </div>
-      ) : isError ? (
-        <ApiError
-          message={error instanceof Error ? error.message : "Could not load standings."}
-          onRetry={() => refetch()}
-        />
-      ) : data && data.rows.length > 0 ? (
-        <StandingsTable rows={data.rows} bands={data.bands} />
+      <div className="flex gap-1" role="tablist" aria-label="League views">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={tab === t.key}
+            onClick={() => setTab(t.key)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+              tab === t.key
+                ? "bg-bg-elevated text-text-primary"
+                : "text-text-secondary hover:text-text-primary",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "standings" ? (
+        <StandingsPanel query={standings} />
       ) : (
-        <div className="surface px-4 py-10 text-center text-sm text-text-secondary">
-          No standings available for this league yet.
-        </div>
+        <ScorersPanel query={scorers} />
       )}
+    </div>
+  );
+}
+
+function StandingsPanel({
+  query,
+}: {
+  query: ReturnType<typeof useStandings>;
+}) {
+  const { data, isLoading, isError, error, refetch } = query;
+  if (isLoading) return <TableSkeleton />;
+  if (isError) {
+    return (
+      <ApiError
+        message={error instanceof Error ? error.message : "Could not load standings."}
+        onRetry={() => refetch()}
+      />
+    );
+  }
+  if (data && data.rows.length > 0) {
+    return <StandingsTable rows={data.rows} bands={data.bands} />;
+  }
+  return <EmptyPanel label="No standings available for this league yet." />;
+}
+
+function ScorersPanel({ query }: { query: ReturnType<typeof useScorers> }) {
+  const { data, isLoading, isError, error, refetch } = query;
+  if (isLoading) return <TableSkeleton />;
+  if (isError) {
+    return (
+      <ApiError
+        message={error instanceof Error ? error.message : "Could not load scorers."}
+        onRetry={() => refetch()}
+      />
+    );
+  }
+  if (data && data.length > 0) {
+    return <ScorersTable rows={data} />;
+  }
+  return <EmptyPanel label="No scorers available for this league yet." />;
+}
+
+function TableSkeleton() {
+  return (
+    <div className="surface overflow-hidden">
+      <div className="space-y-1 p-3">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} className="skeleton h-8" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyPanel({ label }: { label: string }) {
+  return (
+    <div className="surface px-4 py-10 text-center text-sm text-text-secondary">
+      {label}
     </div>
   );
 }
