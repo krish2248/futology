@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { getStandingsAuto } from "@/lib/api/standingsAuto";
+import { getScorersAuto } from "@/lib/api/scorersAuto";
 import type { MatchStatus } from "@/lib/data/demoMatches";
 
 const LIVE_POLL_MS = 30_000;
@@ -65,6 +66,23 @@ export function useStandings(leagueId: number) {
   return useQuery({
     queryKey: ["football", "standings", leagueId],
     queryFn: () => getStandingsAuto(leagueId),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Fetches the top-scorers chart for a given league ID.
+ *
+ * Routes through `getScorersAuto`, which hits the ML-service
+ * football-data.org proxy for real scorers when `NEXT_PUBLIC_ML_API_URL`
+ * is set and the league is on the free tier, and otherwise serves the
+ * seeded demo chart. Cached for 5 minutes — scorers change at most once
+ * per match-day.
+ */
+export function useScorers(leagueId: number) {
+  return useQuery({
+    queryKey: ["football", "scorers", leagueId],
+    queryFn: () => getScorersAuto(leagueId),
     staleTime: 5 * 60_000,
   });
 }
