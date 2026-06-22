@@ -13,7 +13,7 @@ The whole front-end is demoable end-to-end. Building legitimate contributions th
 
 **Phase 0** ✅ shell complete
 **Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.)
-**Phase 2** ✅ demo-mode data layer + StandingsTable + MatchDetailSheet (6 tabs) + per-league pages + per-club pages (6 tabs) + per-player pages + **news feed**. (API routes deleted; `lib/api/client.ts` calls demo data directly. Real RapidAPI re-introduced when we cut over to Vercel + Supabase.)
+**Phase 2** ✅ demo-mode data layer + StandingsTable + MatchDetailSheet (6 tabs) + per-league pages + per-club pages (6 tabs) + per-player pages + **news feed**. (API routes deleted; `lib/api/client.ts` calls demo data directly.) **Real-data wiring DONE (Sessions 24-26):** standings, top scorers, and fixtures/live-scores all route through `*Auto` modules that hit the HF ML-service football-data.org proxy when `NEXT_PUBLIC_ML_API_URL` is set + the league is on the free tier, and fall back to demo otherwise. **Dormant until Sonik sets the secrets** (4 HF Space + 2 GitHub repo — see Session 24).
 **Phase 4** ✅ all 6 intelligence sub-pages
 **Phase 5** ✅ full prediction game loop, leagues, polls, leaders, notifications
 **Phase 6** ✅ all 7 wishlist features (Tournament Simulator, Match Momentum, Press Intensity, Referee Bias, Weather Impact, Injury Intelligence, Odds Movement Alerts)
@@ -1563,7 +1563,7 @@ Tick boxes as we go. Sub-items live in PROJECT_Sick-Boy.md §11.
   - [x] Cmd+K (or `/`) opens SearchModal — debounced 300 ms, keyboard navigable, recent searches in localStorage (max 5)
   - [x] NotificationBell popover with unread count, mark-all-read, ESC + outside-click to close
   - [x] PWA manifest + SVG icon registered in metadata
-- [~] **Phase 2** — Live Data Layer & Core Pages *(demo branches in place; real adapters pending keys)*
+- [~] **Phase 2** — Live Data Layer & Core Pages *(real-data Auto-routers wired for standings/scorers/fixtures; dormant until Sonik sets the HF + GH secrets)*
   - [x] `/api/football/{live-scores,fixtures,standings,search,match/[id]}` route handlers with bible §10 cache headers
   - [x] TanStack Query QueryClientProvider with bible-spec defaults
   - [x] `useLiveScores` (30 s poll) · `useFixtures` · `useMatchDetail` · `useStandings`
@@ -1571,10 +1571,12 @@ Tick boxes as we go. Sub-items live in PROJECT_Sick-Boy.md §11.
   - [x] MatchDetailSheet (Overview / Stats / Lineups / Events / H2H)
   - [x] StandingsTable with European spots / relegation bands, form pills, position arrows
   - [x] Per-league pages SSG'd for all 20 league IDs
-  - [ ] Real RapidAPI adapters in each route (replaces `if (isDemoMode)` branch)
-  - [ ] Club detail page (6 tabs)
-  - [ ] Player detail page
-  - [ ] News feed
+  - [x] Real-data adapters via `*Auto` modules (standings/scorers/fixtures) → HF ML-service football-data.org proxy, demo fallback *(Sessions 24-26; dormant until secrets set)*
+  - [x] Top-scorers chart (`ScorersTable`) + Standings/Top-Scorers tabs on the league page *(Session 25)*
+  - [x] Club detail page (6 tabs)
+  - [x] Player detail page
+  - [x] News feed
+  - [ ] *(deferred polish)* reverse team-ID cross-walk for club-page per-team fixtures; minimal real MatchDetail (overview) to restore a drill-down on real fixtures
 - [x] **Phase 4** — Intelligence Hub & ML Pages *(all 6 features built in demo mode)*
   - [x] **Match Predictor** at `/intelligence/match` — two-team picker, animated probability bar, predicted score, confidence pill, plain-English key factors. POSTs to `/api/ml/predict-match`.
   - [x] **Player Pulse** at `/intelligence/players` — pure-SVG cluster scatter with hover/click, 6 named clusters per bible §9.2, side-by-side comparison radar, similar-players panel, full cluster profile descriptions.
