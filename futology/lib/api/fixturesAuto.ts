@@ -3,7 +3,7 @@ import {
   leagueIdFromCode,
 } from "@/lib/data/footballDataCodes";
 import { findLeague } from "@/lib/data/leagues";
-import { resolveClub } from "@/lib/data/teamCrosswalk";
+import { footballDataIdFor, resolveClub } from "@/lib/data/teamCrosswalk";
 import {
   matchesByStatus,
   type DemoMatch,
@@ -41,14 +41,15 @@ function toStatus(raw: string | null): MatchStatus {
 }
 
 /**
- * Routes the fixtures lookup to the ML-service football-data.org proxy
- * (`GET /proxy/matches`) when `NEXT_PUBLIC_ML_API_URL` is set, otherwise
- * returns the seeded demo fixtures.
+ * Routes the fixtures lookup to the ML-service football-data.org proxy when
+ * `NEXT_PUBLIC_ML_API_URL` is set, otherwise returns the seeded demo fixtures.
  *
- * Team-filtered lookups (the club detail page) stay on demo data — the proxy
- * keys teams by football-data IDs, and the club page is built around our
- * API-Football IDs. Real per-team fixtures need the reverse cross-walk; until
- * then those callers keep their demo behaviour.
+ * - League / status / all lookups hit `GET /proxy/matches` (all free-tier
+ *   competitions, −2…+7 day window).
+ * - Team-filtered lookups (the club detail page) hit
+ *   `GET /proxy/teams/{fdId}/matches` via the reverse cross-walk, when the club
+ *   is one of the seeded teams the cross-walk knows. Unmapped clubs stay on
+ *   demo data (the proxy keys teams by football-data IDs we don't have).
  *
  * Real proxy fixtures are tagged `detailAvailable: false` so the UI skips the
  * detail sheet (there's no real source for stats/lineups/events). Any proxy
@@ -56,29 +57,52 @@ function toStatus(raw: string | null): MatchStatus {
  */
 export async function getFixturesAuto(params?: FixturesParams): Promise<DemoMatch[]> {
   const baseUrl = process.env.NEXT_PUBLIC_ML_API_URL;
-  if (!baseUrl || params?.team) {
+  if (!baseUrl) {
     return api.fixtures(params);
   }
 
-  try {
-    const today = new Date();
-    const from = new Date(today);
-    from.setDate(from.getDate() - 2);
-    const to = new Date(today);
-    to.setDate(to.getDate() + 7);
+  // Per-team lookups need the reverse cross-walk. If the club isn't mapped to a
+  // football-data ID, there's no real source for it — fall back to demo.
+  if (params?.team) {
+    const fdId = footballDataIdFor(params.team);
+    if (fdId == null) return api.fixtures(params);
+    return fetchProxyMatches(
+      baseUrl,
+      `/proxy/teams/${fdId}/matches?limit=40`,
+      params,
+    );
+  }
 
-    const qs = new URLSearchParams({
-      competitions: ALL_FOOTBALL_DATA_CODES.join(","),
-      dateFrom: from.toISOString().slice(0, 10),
-      dateTo: to.toISOString().slice(0, 10),
-    });
-    const url = `${baseUrl.replace(/\/+$/, "")}/proxy/matches?${qs.toString()}`;
+  const today = new Date();
+  const from = new Date(today);
+  from.setDate(from.getDate() - 2);
+  const to = new Date(today);
+  to.setDate(to.getDate() + 7);
+  const qs = new URLSearchParams({
+    competitions: ALL_FOOTBALL_DATA_CODES.join(","),
+    dateFrom: from.toISOString().slice(0, 10),
+    dateTo: to.toISOString().slice(0, 10),
+  });
+  return fetchProxyMatches(baseUrl, `/proxy/matches?${qs.toString()}`, params);
+}
+
+/**
+ * Fetches a proxy matches endpoint, reshapes to `DemoMatch[]`, applies the
+ * league + status filters, and falls back to demo fixtures on any error.
+ */
+async function fetchProxyMatches(
+  baseUrl: string,
+  path: string,
+  params?: FixturesParams,
+): Promise<DemoMatch[]> {
+  try {
+    const url = `${baseUrl.replace(/\/+$/, "")}${path}`;
     const token = process.env.NEXT_PUBLIC_ML_API_TOKEN;
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
 
     const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`proxy /matches responded ${res.status}`);
+    if (!res.ok) throw new Error(`proxy ${path} responded ${res.status}`);
 
     const data = (await res.json()) as ProxyMatchesResponse;
     const all = (data.matches ?? []).map(toDemoMatch);
