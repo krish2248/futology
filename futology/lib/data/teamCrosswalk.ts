@@ -61,6 +61,24 @@ const FD_TO_AF: Record<number, number> = {
   1903: 211, // Benfica
 };
 
+// API-Football team ID → football-data.org team ID (reverse of FD_TO_AF),
+// built once. Lets a seeded club page ask the proxy for its own fixtures via
+// `/proxy/teams/{fdId}/matches`.
+const AF_TO_FD: Record<number, number> = (() => {
+  const m: Record<number, number> = {};
+  for (const [fd, af] of Object.entries(FD_TO_AF)) m[af] = Number(fd);
+  return m;
+})();
+
+/**
+ * Resolves a seeded club's API-Football team ID to its football-data.org team
+ * ID, or `undefined` when the club isn't in the cross-walk (so callers can fall
+ * back to demo fixtures rather than hitting the proxy with an unmapped ID).
+ */
+export function footballDataIdFor(afId: number): number | undefined {
+  return AF_TO_FD[afId];
+}
+
 /** Lowercase, de-accent, drop club-type tokens & punctuation for fuzzy matching. */
 function normalize(name: string): string {
   return name
