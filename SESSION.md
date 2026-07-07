@@ -25,6 +25,52 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 
 ## 📅 Session History
 
+### Session 27 — 2026-07-07 (reverse cross-walk → real per-team fixtures on the club page)
+
+**Goal:** The Session 27 plan had three items. Item #1 (smoke-test real data)
+is still blocked — probed the live HF Space, `/health` still returns
+`mode:"stub"`, so Sonik's 4 HF + 2 GitHub secrets remain unset and the live
+site keeps serving demo data. Did the well-scoped code item (#2): the reverse
+team-ID cross-walk so the club page's per-team fixtures can move to real data.
+
+**Built:**
+- `futology/lib/data/teamCrosswalk.ts` — `footballDataIdFor(afId)`: reverse of
+  the existing `FD_TO_AF` table (API-Football club ID → football-data team ID),
+  built once. Returns `undefined` for unmapped clubs so callers fall back to
+  demo rather than hitting the proxy with an ID it can't resolve.
+- `futology/lib/api/fixturesAuto.ts` — `getFixturesAuto` no longer sends
+  team-filtered lookups straight to demo. When `NEXT_PUBLIC_ML_API_URL` is set
+  and the club is in the cross-walk, per-team lookups now hit
+  `GET /proxy/teams/{fdId}/matches?limit=40`. Extracted a shared
+  `fetchProxyMatches(baseUrl, path, params)` helper that both the all-fixtures
+  (`/proxy/matches`) and per-team paths reuse — same reshape (`toDemoMatch`),
+  same league+status filter, same graceful demo fallback on any error. Real
+  per-team fixtures stay `detailAvailable: false` (unchanged from S26).
+
+**Verified:** `tsc --noEmit` ✓ · `next lint` ✓ (no warnings) · `next build` ✓
+(116 routes) · Playwright **40/40** (demo-mode behaviour unchanged — the proxy
+branch is dormant until the secrets land).
+
+**Still Sonik's action (unchanged since Session 23):** 4 HF Space secrets +
+2 GitHub repo secrets (see Session 24). Until set, standings, scorers, and all
+fixtures (league + per-team) serve demo data on the live site.
+
+**Only remaining optional polish (item #3):** a minimal real MatchDetail
+(overview-only) so real fixtures can regain a basic drill-down. Deferred
+pending a UX call — football-data's free tier carries no lineups/stats/events,
+so a real fixture's detail sheet would have only the Overview tab populated
+and 4 empty tabs, which sits awkwardly with the minimal-UI direction. Needs a
+new ml-service `/proxy/matches/{id}` endpoint + reshape + a hook branch + a
+decision on how to present the overview-only sheet.
+
+**Next session (Session 28) starts here:**
+1. If the secrets have landed, smoke-test the live site (`/scores`, `/` live
+   strip, `/leagues/39`, a club page's fixtures now via `/proxy/teams/{id}/matches`).
+2. Otherwise, either build item #3 once the overview-only UX is decided, or
+   pick up the Supabase cutover (deferred since Session 22).
+
+---
+
 ### Session 26 — 2026-06-21 (fixtures real-data wiring + team-ID cross-walk)
 
 **Goal:** The deferred item from Sessions 24-25 — wire fixtures to the
