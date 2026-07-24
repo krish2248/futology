@@ -128,6 +128,7 @@ type SessionState = {
   notifications: AppNotification[];
 
   signIn: (email: string) => DemoUser;
+  setAuthUser: (user: DemoUser) => void;
   signOut: () => void;
   completeOnboarding: () => void;
   toggleLeague: (league: FollowedLeague) => void;
@@ -262,6 +263,18 @@ export const useSession = create<SessionState>()(
         setSessionCookie(user.id);
         set({ user });
         return user;
+      },
+
+      // Adopt an externally-authenticated user (Supabase OTP session)
+      // without minting a synthetic `demo_` id. The Supabase bridge
+      // calls this with the real `auth.users.id` (UUID) so downstream
+      // features (follow-graph sync, predictions) key off the true id.
+      // Follow lists are left untouched — they're rehydrated from
+      // Supabase separately, and clobbering them here would wipe a
+      // returning user's local state before that fetch lands.
+      setAuthUser: (user) => {
+        setSessionCookie(user.id);
+        set({ user });
       },
 
       signOut: () => {

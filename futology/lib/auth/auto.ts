@@ -38,9 +38,14 @@ export async function signInAuto(email: string): Promise<SignInResult> {
           "Check env var hygiene at build time.",
       );
     }
+    // Include the routing prefix ('/futology' on GH Pages, '' on Vercel)
+    // so the magic link lands on a real route instead of a host-root 404.
+    // This URL must also be in the Supabase project's allowed redirect
+    // list (Authentication > URL Configuration).
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
     const redirectTo =
       typeof window !== "undefined"
-        ? `${window.location.origin}/onboarding`
+        ? `${window.location.origin}${basePath}/onboarding`
         : undefined;
     const { error } = await supabase.auth.signInWithOtp({
       email,
