@@ -12,7 +12,7 @@
 The whole front-end is demoable end-to-end. Building legitimate contributions through real code improvements.
 
 **Phase 0** ✅ shell complete
-**Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.)
+**Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.) **Supabase cutover part 1 DONE (Session 28):** the live build is already Supabase-configured, and the auth loop is now closed — `SupabaseSessionBridge` mirrors the OTP session into the store so `AuthGate` recognizes real signed-in users. Follow-graph + predictions persistence are part 2.
 **Phase 2** ✅ demo-mode data layer + StandingsTable + MatchDetailSheet (6 tabs) + per-league pages + per-club pages (6 tabs) + per-player pages + **news feed**. (API routes deleted; `lib/api/client.ts` calls demo data directly.) **Real-data wiring DONE (Sessions 24-26):** standings, top scorers, and fixtures/live-scores all route through `*Auto` modules that hit the HF ML-service football-data.org proxy when `NEXT_PUBLIC_ML_API_URL` is set + the league is on the free tier, and fall back to demo otherwise. **Dormant until Sonik sets the secrets** (4 HF Space + 2 GitHub repo — see Session 24).
 **Phase 4** ✅ all 6 intelligence sub-pages
 **Phase 5** ✅ full prediction game loop, leagues, polls, leaders, notifications
@@ -24,6 +24,67 @@ When the user comes back to this project, start by reading `SESSION.md` and visi
 ---
 
 ## 📅 Session History
+
+### Session 28 — 2026-07-24 (Supabase cutover, part 1 — close the auth loop)
+
+**Goal:** Sonik chose "start the Supabase cutover" (the ML/football-data
+smoke-test is still blocked — HF Space `/health` re-probed this session, still
+`mode:"stub"`, so the 4 HF + 2 GitHub secrets remain unset). Picked the correct
+foundational first increment.
+
+**The gap found:** the live GH Pages build **is already Supabase-configured** —
+`deploy.yml` inlines `NEXT_PUBLIC_SUPABASE_URL` + `_ANON_KEY` (Session 23), so
+`isSupabaseConfigured()` is `true` live and `/login` already runs real email-OTP.
+But the loop was never closed: `AuthGate` gates on `useSession(s => s.user)`, and
+in OTP mode nothing populated that store slice after the magic-link redirect — so
+a real signed-in user would bounce straight back to `/login`. Supabase auth was
+effectively non-functional on the live site.
+
+**Built:**
+- `futology/lib/store/session.ts` — new `setAuthUser(user)` action: adopts an
+  externally-authenticated user (real `auth.users` UUID as `id`, not a synthetic
+  `demo_` id) + sets the session cookie. Deliberately leaves follow lists intact
+  (they'll be rehydrated from Supabase in part 2; clobbering here would wipe a
+  returning user's local state before that fetch lands).
+- `futology/components/providers/SupabaseSessionBridge.tsx` — new client
+  component. Env-gated (pure `process.env` read, no Supabase import), then
+  **dynamically** `import()`s the browser client so `@supabase/ssr` stays out of
+  the shared layout chunk. Reads `getSession()` on mount (the client's
+  `detectSessionInUrl` exchanges the magic-link code first) and subscribes to
+  `onAuthStateChange`, mirroring the user into the store via `setAuthUser`; clears
+  only on explicit `SIGNED_OUT`. Renders nothing.
+- `futology/components/providers/Providers.tsx` — mounts `<SupabaseSessionBridge />`
+  above `AuthGate` so the store is populated before the gate reads it.
+- `futology/lib/auth/auto.ts` — magic-link `emailRedirectTo` now includes
+  `NEXT_PUBLIC_BASE_PATH` (`/futology` on GH Pages) — it previously pointed at
+  `origin/onboarding`, a host-root 404 on the live site.
+- `futology/app/login/page.tsx` — badge + intro copy are now honest when
+  Supabase is configured ("Email sign-in" / magic-link copy) vs. the local demo
+  build ("Demo mode"). Gated on a build-time `SUPABASE_LIVE` const.
+
+**Verified:** `tsc --noEmit` ✓ · `next lint` ✓ (no warnings) · `next build` ✓
+(shared First Load JS **87.4 kB** — bridge added nothing to the shared chunk,
+proving the dynamic import worked) · Playwright **40/40** (local build has no
+Supabase env → bridge no-ops → demo behaviour unchanged).
+
+**Sonik's action to light this up (Supabase dashboard, one-time):** add the
+magic-link redirect URL `https://krish2248.github.io/futology/onboarding` to
+Authentication → URL Configuration → Redirect URLs. Without it Supabase rejects
+the OTP redirect. (The schema + project already exist from Session 23.)
+
+**Next session (Session 29) starts here — Supabase cutover part 2:**
+1. **Follow-graph sync.** Rehydrate `user_followed_{leagues,clubs,players,
+   tournaments}` from Supabase into the session store on login, and write-through
+   each `toggle*` (upsert on follow, delete on unfollow) when configured — mirror
+   the `signInAuto` fallback pattern; keep Zustand as the reactive source of truth
+   for the UI so the ~6 consumer components don't change. Same dynamic-import
+   discipline to protect the shared chunk.
+2. Then predictions persistence (`predictions` table) — noting the S26 caveat that
+   auto-settlement matches on demo IDs.
+3. If the ML/football-data secrets have landed by then, run the still-pending live
+   smoke-test (Session 27 item #1).
+
+---
 
 ### Session 27 — 2026-07-07 (reverse cross-walk → real per-team fixtures on the club page)
 
