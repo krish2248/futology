@@ -19,7 +19,39 @@ The whole front-end is demoable end-to-end. Building legitimate contributions th
 **Phase 6** ✅ all 7 wishlist features (Tournament Simulator, Match Momentum, Press Intensity, Referee Bias, Weather Impact, Injury Intelligence, Odds Movement Alerts)
 **Phase 7** 🔄 IN PROGRESS — ErrorBoundary ✅, Settings ✅, dark-lock indicator ✅, **GitHub Pages deploy with auto-CI workflow** ✅, **next-pwa service worker** ✅ (configured, needs testing), **Playwright E2E smoke tests** ✅ (setup complete). Outstanding: Lighthouse audit ≥ 90, Vercel + Supabase cutover.
 
-When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The "Next session starts here" block below has the playbook.
+When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The block just below is the cold-start playbook; full detail is in the Session 28 entry.
+
+---
+
+## ▶ START HERE TOMORROW (cold-start playbook, as of Session 28 · 2026-07-24)
+
+**Where we are:** Supabase cutover **part 1 is done + pushed** — the OTP auth loop
+is closed (`SupabaseSessionBridge` mirrors the Supabase session into the store so
+`AuthGate` recognizes real signed-in users). All green: `tsc` · `lint` · `build`
+(shared JS 87.4 kB) · Playwright 40/40. `main` == `origin/main`, working tree clean.
+
+**Do first — two Sonik actions are pending (both one-time, no code):**
+1. **Supabase redirect allowlist** — add `https://krish2248.github.io/futology/onboarding`
+   to Supabase → Authentication → URL Configuration → Redirect URLs. Until then the
+   live magic-link sign-in is rejected on redirect. *(This is the only thing blocking
+   Supabase auth from working live now.)*
+2. **ML/football-data secrets** (unchanged since Session 23) — 4 HF Space secrets +
+   2 GitHub repo secrets (see Session 24). Re-probe `https://krishsoni1-futology.hf.space/health`;
+   if it still says `mode:"stub"`, they're still unset and standings/scorers/fixtures
+   keep serving demo data.
+
+**Then build — Supabase cutover part 2 (next code increment):**
+1. **Follow-graph sync.** On login, rehydrate `user_followed_{leagues,clubs,players,
+   tournaments}` from Supabase into the session store; write-through each `toggle*`
+   (upsert on follow, delete on unfollow) when configured. Mirror the `signInAuto`
+   fallback pattern, keep Zustand as the reactive source of truth so the ~6 consumer
+   components don't change, and use the same dynamic-`import()` discipline the bridge
+   uses so `@supabase/ssr` stays out of the shared chunk. Consumers to leave untouched:
+   `app/clubs/**`, `app/players/[playerId]/**`, `app/onboarding/page.tsx`, `app/profile/**`.
+2. Then **predictions persistence** (`predictions` table) — remember the S26 caveat that
+   auto-settlement matches on demo match IDs, so it won't settle against real fixtures.
+
+Full detail + file-by-file rationale: **Session 28** entry below.
 
 ---
 
