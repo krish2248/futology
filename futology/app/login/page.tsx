@@ -6,8 +6,14 @@ import Link from "next/link";
 import { Mail, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { signInAuto, type SignInResult } from "@/lib/auth/auto";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { useSession } from "@/lib/store/session";
 import { cn } from "@/lib/utils/cn";
+
+// Evaluated at build time — the live GH Pages / Vercel builds inline the
+// Supabase env, so the badge + copy reflect real email-OTP; the local
+// demo build (no env) keeps the "Demo mode" framing.
+const SUPABASE_LIVE = isSupabaseConfigured();
 
 type Step = "form" | "sent" | "ready";
 
@@ -76,7 +82,8 @@ export default function LoginPage() {
           />
           <div className="relative">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
-              <Sparkles className="h-3 w-3" aria-hidden /> Demo mode
+              <Sparkles className="h-3 w-3" aria-hidden />{" "}
+              {SUPABASE_LIVE ? "Email sign-in" : "Demo mode"}
             </span>
 
             <AnimatePresence mode="wait">
@@ -94,8 +101,9 @@ export default function LoginPage() {
                     Welcome back
                   </h1>
                   <p className="text-sm text-text-secondary">
-                    Enter any email to continue. Real Supabase email-OTP wires
-                    up in Phase 1.5 of the build plan.
+                    {SUPABASE_LIVE
+                      ? "Enter your email and we'll send you a magic link — no password required."
+                      : "Enter any email to continue in demo mode."}
                   </p>
                   <label className="block">
                     <span className="text-xs uppercase tracking-wider text-text-secondary">
