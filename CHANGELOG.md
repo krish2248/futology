@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Supabase follow-graph sync** — `lib/supabase/followSync.ts` rehydrates `user_followed_{leagues,clubs,players,tournaments}` from Supabase on login; write-through on every `toggle*` (upsert on follow, delete on unfollow). Gated on `isSupabaseConfigured()`, uses dynamic `import()` to keep `@supabase/ssr` out of the shared chunk.
+- **Supabase predictions persistence** — `lib/supabase/predictionsSync.ts` persists predictions to the `predictions` table: upsert on save, delete, and settle. Same gating + dynamic import discipline.
+- **Store hydration actions** — `setFollowedLeagues`, `setFollowedClubs`, `setFollowedPlayers`, `setFollowedTournaments`, `setPredictions` for rehydrating the Zustand store from Supabase.
+- **`SupabaseSessionBridge` now rehydrates follows + predictions** on every auth state change (initial session load and `onAuthStateChange`).
+
+### Changed
+- Session store `toggle*` and prediction actions (`upsertPrediction`, `deletePrediction`, `settlePrediction`) now fire fire-and-forget Supabase syncs via dynamic imports when Supabase is configured.
+
 ## [0.7.0] — 2026-05-24
 
 Phase 7 quality bar — Lighthouse ≥ 90, green deploy, expanded E2E. Demo-mode feature freeze; next milestone is the Supabase + Vercel real-services cutover.

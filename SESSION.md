@@ -21,16 +21,74 @@ The whole front-end is demoable end-to-end. Building legitimate contributions th
 
 When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The block just below is the cold-start playbook; full detail is in the Session 28 entry.
 
+### Session 29 — 2026-07-28 (Supabase cutover, part 2 — follow-graph sync + predictions persistence)
+
+**Goal:** Pick up from Session 28's next-session plan: build the follow-graph sync
+and predictions persistence. Keep Zustand as the reactive source of truth, mirror
+the `signInAuto` / dynamic-`import()` discipline so `@supabase/ssr` stays out of
+the shared chunk, and leave consumer components untouched.
+
+**Built:**
+
+*Follow-graph sync*
+- `futology/lib/supabase/followSync.ts` — new module with two responsibilities:
+  - `rehydrateFollows(userId)` — reads all four `user_followed_*` tables from
+    Supabase and hydrates the Zustand store in one atomic pass via four new
+    `setFollowed*` actions on the store. Gated on `isSupabaseConfigured()` and
+    a `!userId.startsWith("demo_")` check.
+  - `syncFollowLeague` / `syncFollowClub` / `syncFollowPlayer` / `syncFollowTournament` —
+    write-through functions called from the store's `toggle*` actions. Upsert on
+    follow, delete on unfollow. Each gated on Supabase being configured.
+- The `SupabaseSessionBridge` now calls `rehydrateFollows(user.id)` after every
+  auth state change (initial session + `onAuthStateChange`).
+- The four store `toggle*` actions were refactored from pure `set()` calls to
+  compute the new state first, set it synchronously (Zustand is the reactive
+  source of truth), then fire a dynamic `import()` to the sync module for the
+  Supabase write-through — exactly the same dynamic-import discipline the bridge
+  uses, keeping `@supabase/ssr` out of the shared chunk.
+- Consumer components unchanged: `app/clubs/**`, `app/players/**`,
+  `app/onboarding/page.tsx`, `app/profile/**`, `app/HomeNews.tsx`,
+  `app/news/NewsView.tsx` — all still read from `useSession` and call
+  `toggle*` as before.
+
+*Predictions persistence*
+- `futology/lib/supabase/predictionsSync.ts` — new module with:
+  - `rehydratePredictions(userId)` — fetches predictions from Supabase and
+    calls `store.setPredictions()`.
+  - `syncUpsertPrediction` — upserts to the `predictions` table on the
+    `user_id,fixture_id` conflict target.
+  - `syncDeletePrediction` — deletes by id + user_id.
+  - `syncSettlePrediction` — updates actual scores, points, and `is_settled`.
+- Store's `upsertPrediction`, `deletePrediction`, and `settlePrediction` actions
+  all updated with fire-and-forget dynamic imports to the sync module.
+- `SupabaseSessionBridge` now also calls `rehydratePredictions` alongside
+  `rehydrateFollows` on auth state changes.
+- Four new store actions: `setFollowedLeagues`, `setFollowedClubs`,
+  `setFollowedPlayers`, `setFollowedTournaments`, `setPredictions` — all
+  set-only, used exclusively for hydration.
+
+**Verified:** `tsc --noEmit` ✓ · `next lint` ✓ · `next build` ✓ (116 routes,
+shared JS 87.5 kB — the new code is only reachable via dynamic imports so the
+shared chunk is unchanged from Session 28) · Playwright **40/40** (demo-mode
+behaviour unchanged — all sync functions gate on `isSupabaseConfigured()`, which
+is false in the local build).
+
+**Still pending (Sonik actions, no code):**
+1. Add `https://krish2248.github.io/futology/onboarding` to Supabase redirect allowlist.
+2. Set 4 HF Space secrets + 2 GitHub repo secrets for ML/football-data.
+
 ---
 
-## ▶ START HERE TOMORROW (cold-start playbook, as of Session 28 · 2026-07-24)
+## ▶ START HERE TOMORROW (cold-start playbook, as of Session 29 · 2026-07-28)
 
-**Where we are:** Supabase cutover **part 1 is done + pushed** — the OTP auth loop
-is closed (`SupabaseSessionBridge` mirrors the Supabase session into the store so
-`AuthGate` recognizes real signed-in users). All green: `tsc` · `lint` · `build`
-(shared JS 87.4 kB) · Playwright 40/40. `main` == `origin/main`, working tree clean.
+**Where we are:** Supabase cutover **part 1 + part 2 are done + pushed** — the OTP
+auth loop is closed (`SupabaseSessionBridge` mirrors the Supabase session), the
+follow-graph sync rehydrates `user_followed_*` tables on login with write-through
+on every `toggle*`, and predictions are persisted to the `predictions` table
+(upsert on save, delete, settle). All green: `tsc` · `lint` · `build` (shared JS
+87.5 kB) · Playwright 40/40. `main` == `origin/main`, working tree clean.
 
-**Do first — two Sonik actions are pending (both one-time, no code):**
+**Two Sonik actions are still pending (one-time, no code):**
 1. **Supabase redirect allowlist** — add `https://krish2248.github.io/futology/onboarding`
    to Supabase → Authentication → URL Configuration → Redirect URLs. Until then the
    live magic-link sign-in is rejected on redirect. *(This is the only thing blocking
@@ -40,18 +98,11 @@ is closed (`SupabaseSessionBridge` mirrors the Supabase session into the store s
    if it still says `mode:"stub"`, they're still unset and standings/scorers/fixtures
    keep serving demo data.
 
-**Then build — Supabase cutover part 2 (next code increment):**
-1. **Follow-graph sync.** On login, rehydrate `user_followed_{leagues,clubs,players,
-   tournaments}` from Supabase into the session store; write-through each `toggle*`
-   (upsert on follow, delete on unfollow) when configured. Mirror the `signInAuto`
-   fallback pattern, keep Zustand as the reactive source of truth so the ~6 consumer
-   components don't change, and use the same dynamic-`import()` discipline the bridge
-   uses so `@supabase/ssr` stays out of the shared chunk. Consumers to leave untouched:
-   `app/clubs/**`, `app/players/[playerId]/**`, `app/onboarding/page.tsx`, `app/profile/**`.
-2. Then **predictions persistence** (`predictions` table) — remember the S26 caveat that
-   auto-settlement matches on demo match IDs, so it won't settle against real fixtures.
-
-Full detail + file-by-file rationale: **Session 28** entry below.
+**What's left (future sessions):**
+1. If the ML/football-data secrets have landed by then, run the live smoke-test
+   (Session 27 item #1).
+2. Vercel + Supabase cutover completion (SSR target, cookie-based middleware).
+3. Real-data swaps for sentiment (Reddit+RoBERTa) and transfer (FBref).
 
 ---
 

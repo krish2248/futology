@@ -50,15 +50,28 @@ export function SupabaseSessionBridge() {
         data: { session },
       } = await supabase.auth.getSession();
       if (!active) return;
+      async function rehydrateUser(userId: string) {
+        const [{ rehydrateFollows }, { rehydratePredictions }] = await Promise.all([
+          import("@/lib/supabase/followSync"),
+          import("@/lib/supabase/predictionsSync"),
+        ]);
+        rehydrateFollows(userId);
+        rehydratePredictions(userId);
+      }
+
       if (session?.user) {
-        useSession.getState().setAuthUser(mapSupabaseUser(session.user));
+        const user = mapSupabaseUser(session.user);
+        useSession.getState().setAuthUser(user);
+        rehydrateUser(user.id);
       }
 
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
         if (nextSession?.user) {
-          useSession.getState().setAuthUser(mapSupabaseUser(nextSession.user));
+          const user = mapSupabaseUser(nextSession.user);
+          useSession.getState().setAuthUser(user);
+          rehydrateUser(user.id);
         } else if (event === "SIGNED_OUT") {
           // Only clear on an explicit sign-out — an empty INITIAL_SESSION
           // must not wipe a store that another path populated.

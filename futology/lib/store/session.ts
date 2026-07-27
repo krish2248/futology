@@ -129,6 +129,11 @@ type SessionState = {
 
   signIn: (email: string) => DemoUser;
   setAuthUser: (user: DemoUser) => void;
+  setFollowedLeagues: (leagues: FollowedLeague[]) => void;
+  setFollowedClubs: (clubs: FollowedClub[]) => void;
+  setFollowedPlayers: (players: FollowedPlayer[]) => void;
+  setFollowedTournaments: (tournaments: FollowedTournament[]) => void;
+  setPredictions: (predictions: Prediction[]) => void;
   signOut: () => void;
   completeOnboarding: () => void;
   toggleLeague: (league: FollowedLeague) => void;
@@ -258,42 +263,68 @@ export const useSession = create<SessionState>()(
     (set, get) => ({
       ...EMPTY_USER_STATE,
 
-      signIn: (email) => {
-        const user = makeUser(email);
-        setSessionCookie(user.id);
-        set({ user });
-        return user;
-      },
+  signIn: (email) => {
+    const user = makeUser(email);
+    setSessionCookie(user.id);
+    set({ user });
+    return user;
+  },
 
-      // Adopt an externally-authenticated user (Supabase OTP session)
-      // without minting a synthetic `demo_` id. The Supabase bridge
-      // calls this with the real `auth.users.id` (UUID) so downstream
-      // features (follow-graph sync, predictions) key off the true id.
-      // Follow lists are left untouched — they're rehydrated from
-      // Supabase separately, and clobbering them here would wipe a
-      // returning user's local state before that fetch lands.
-      setAuthUser: (user) => {
-        setSessionCookie(user.id);
-        set({ user });
-      },
+  // Adopt an externally-authenticated user (Supabase OTP session)
+  // without minting a synthetic `demo_` id. The Supabase bridge
+  // calls this with the real `auth.users.id` (UUID) so downstream
+  // features (follow-graph sync, predictions) key off the true id.
+  // Follow lists are left untouched — they're rehydrated from
+  // Supabase separately, and clobbering them here would wipe a
+  // returning user's local state before that fetch lands.
+  setAuthUser: (user) => {
+    setSessionCookie(user.id);
+    set({ user });
+  },
 
-      signOut: () => {
-        setSessionCookie(null);
-        set({ ...EMPTY_USER_STATE });
-      },
+  setFollowedLeagues: (leagues) => set({ followedLeagues: leagues }),
+  setFollowedClubs: (clubs) => set({ followedClubs: clubs }),
+  setFollowedPlayers: (players) => set({ followedPlayers: players }),
+  setFollowedTournaments: (tournaments) => set({ followedTournaments: tournaments }),
+  setPredictions: (predictions) => set({ predictions }),
 
-      completeOnboarding: () => set({ onboardingComplete: true }),
+  signOut: () => {
+    setSessionCookie(null);
+    set({ ...EMPTY_USER_STATE });
+  },
 
-      toggleLeague: (league) =>
-        set((state) => ({ followedLeagues: toggleBy(state.followedLeagues, league) })),
-      toggleClub: (club) =>
-        set((state) => ({ followedClubs: toggleBy(state.followedClubs, club) })),
-      togglePlayer: (player) =>
-        set((state) => ({ followedPlayers: toggleBy(state.followedPlayers, player) })),
-      toggleTournament: (tournament) =>
-        set((state) => ({
-          followedTournaments: toggleBy(state.followedTournaments, tournament),
-        })),
+  completeOnboarding: () => set({ onboardingComplete: true }),
+
+  toggleLeague: (league) => {
+    const willBeFollowed = !get().followedLeagues.some((l) => l.id === league.id);
+    set((state) => ({ followedLeagues: toggleBy(state.followedLeagues, league) }));
+    if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      import("@/lib/supabase/followSync").then((m) => m.syncFollowLeague(league, willBeFollowed));
+    }
+  },
+  toggleClub: (club) => {
+    const willBeFollowed = !get().followedClubs.some((c) => c.id === club.id);
+    set((state) => ({ followedClubs: toggleBy(state.followedClubs, club) }));
+    if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      import("@/lib/supabase/followSync").then((m) => m.syncFollowClub(club, willBeFollowed));
+    }
+  },
+  togglePlayer: (player) => {
+    const willBeFollowed = !get().followedPlayers.some((p) => p.id === player.id);
+    set((state) => ({ followedPlayers: toggleBy(state.followedPlayers, player) }));
+    if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      import("@/lib/supabase/followSync").then((m) => m.syncFollowPlayer(player, willBeFollowed));
+    }
+  },
+  toggleTournament: (tournament) => {
+    const willBeFollowed = !get().followedTournaments.some((t) => t.id === tournament.id);
+    set((state) => ({
+      followedTournaments: toggleBy(state.followedTournaments, tournament),
+    }));
+    if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      import("@/lib/supabase/followSync").then((m) => m.syncFollowTournament(tournament, willBeFollowed));
+    }
+  },
 
       upsertPrediction: (input) => {
         const winner = winnerFromScores(input.predictedHomeScore, input.predictedAwayScore);
@@ -330,11 +361,29 @@ export const useSession = create<SessionState>()(
             ? state.predictions.map((p) => (p.id === next.id ? next : p))
             : [next, ...state.predictions],
         }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/predictionsSync").then((m) =>
+            m.syncUpsertPrediction(input.fixtureId, {
+              homeTeam: input.homeTeam,
+              awayTeam: input.awayTeam,
+              matchDate: input.matchDate,
+              predictedHomeScore: input.predictedHomeScore,
+              predictedAwayScore: input.predictedAwayScore,
+              predictedWinner: winner,
+              mlSuggestedWinner: input.mlSuggestedWinner,
+              mlConfidence: input.mlConfidence,
+            }),
+          );
+        }
         return next;
       },
 
-      deletePrediction: (id) =>
-        set((state) => ({ predictions: state.predictions.filter((p) => p.id !== id) })),
+      deletePrediction: (id) => {
+        set((state) => ({ predictions: state.predictions.filter((p) => p.id !== id) }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/predictionsSync").then((m) => m.syncDeletePrediction(id));
+        }
+      },
 
       settlePrediction: ({ fixtureId, actualHomeScore, actualAwayScore }) => {
         const target = get().predictions.find((p) => p.fixtureId === fixtureId);
@@ -364,6 +413,11 @@ export const useSession = create<SessionState>()(
           predictions: state.predictions.map((p) => (p.id === target.id ? next : p)),
           notifications: [notif, ...state.notifications].slice(0, 30),
         }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/predictionsSync").then((m) =>
+            m.syncSettlePrediction(fixtureId, actualHomeScore, actualAwayScore, points),
+          );
+        }
         // Trigger league recompute on next tick (cheap; idempotent)
         queueMicrotask(() => get().recomputeLeagueStats());
         return next;
