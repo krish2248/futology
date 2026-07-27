@@ -134,6 +134,8 @@ type SessionState = {
   setFollowedPlayers: (players: FollowedPlayer[]) => void;
   setFollowedTournaments: (tournaments: FollowedTournament[]) => void;
   setPredictions: (predictions: Prediction[]) => void;
+  setNotifications: (notifications: AppNotification[]) => void;
+  prependNotification: (notification: AppNotification) => void;
   signOut: () => void;
   completeOnboarding: () => void;
   toggleLeague: (league: FollowedLeague) => void;
@@ -287,6 +289,14 @@ export const useSession = create<SessionState>()(
   setFollowedPlayers: (players) => set({ followedPlayers: players }),
   setFollowedTournaments: (tournaments) => set({ followedTournaments: tournaments }),
   setPredictions: (predictions) => set({ predictions }),
+  setNotifications: (notifications) => set({ notifications }),
+  prependNotification: (notification) => {
+    set((state) => ({
+      notifications: [notification, ...state.notifications].filter(
+        (n, i, arr) => i === 0 || arr.findIndex((x) => x.id === n.id) === i,
+      ).slice(0, 30),
+    }));
+  },
 
   signOut: () => {
     setSessionCookie(null);
@@ -396,8 +406,10 @@ export const useSession = create<SessionState>()(
           pointsEarned: points,
           isSettled: true,
         };
-        const notif: AppNotification = {
-          id: makeId("notif"),
+        set((state) => ({
+          predictions: state.predictions.map((p) => (p.id === target.id ? next : p)),
+        }));
+        get().addNotification({
           type: "prediction_settled",
           title:
             points === 3
@@ -406,13 +418,7 @@ export const useSession = create<SessionState>()(
                 ? "✅ Right winner! +1 point"
                 : "Match settled",
           body: `${target.homeTeam} ${actualHomeScore}–${actualAwayScore} ${target.awayTeam} · you predicted ${target.predictedHomeScore}–${target.predictedAwayScore}`,
-          isRead: false,
-          createdAt: new Date().toISOString(),
-        };
-        set((state) => ({
-          predictions: state.predictions.map((p) => (p.id === target.id ? next : p)),
-          notifications: [notif, ...state.notifications].slice(0, 30),
-        }));
+        });
         if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
           import("@/lib/supabase/predictionsSync").then((m) =>
             m.syncSettlePrediction(fixtureId, actualHomeScore, actualAwayScore, points),
@@ -515,7 +521,7 @@ export const useSession = create<SessionState>()(
         });
       },
 
-      addNotification: (n) =>
+      addNotification: (n) => {
         set((state) => ({
           notifications: [
             {
@@ -526,12 +532,20 @@ export const useSession = create<SessionState>()(
             },
             ...state.notifications,
           ].slice(0, 30),
-        })),
+        }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/notificationsSync").then((m) => m.syncAddNotification(n));
+        }
+      },
 
-      markAllNotificationsRead: () =>
+      markAllNotificationsRead: () => {
         set((state) => ({
           notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
-        })),
+        }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/notificationsSync").then((m) => m.syncMarkAllNotificationsRead());
+        }
+      },
 
       reset: () => {
         setSessionCookie(null);

@@ -17,7 +17,7 @@ The whole front-end is demoable end-to-end. Building legitimate contributions th
 **Phase 4** ✅ all 6 intelligence sub-pages
 **Phase 5** ✅ full prediction game loop, leagues, polls, leaders, notifications
 **Phase 6** ✅ all 7 wishlist features (Tournament Simulator, Match Momentum, Press Intensity, Referee Bias, Weather Impact, Injury Intelligence, Odds Movement Alerts)
-**Phase 7** 🔄 IN PROGRESS — ErrorBoundary ✅, Settings ✅, dark-lock indicator ✅, **GitHub Pages deploy with auto-CI workflow** ✅, **next-pwa service worker** ✅ (configured, needs testing), **Playwright E2E smoke tests** ✅ (setup complete). Outstanding: Lighthouse audit ≥ 90, Vercel target.
+**Phase 7** 🔄 IN PROGRESS — ErrorBoundary ✅, Settings ✅, dark-lock indicator ✅, **GitHub Pages deploy with auto-CI workflow** ✅, **next-pwa service worker** ✅ (configured, needs testing), **Playwright E2E smoke tests** ✅ (setup complete). **Notifications Realtime subscription** ✅ (Supabase Realtime wired in bridge). Outstanding: Vercel target.
 
 When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The block just below is the cold-start playbook.
 
@@ -101,12 +101,10 @@ npx playwright test                     # 40/40
 ```
 Visit **https://krish2248.github.io/futology/** to see the live state.
 
-**Where we are:** Supabase cutover **part 1 + part 2 are done + pushed** — the OTP
-auth loop is closed (`SupabaseSessionBridge` mirrors the Supabase session), the
-follow-graph sync rehydrates `user_followed_*` tables on login with write-through
-on every `toggle*`, and predictions are persisted to the `predictions` table
-(upsert on save, delete, settle). All green: `tsc` · `lint` · `build` (shared JS
-87.5 kB) · Playwright 40/40. `main` == `origin/main`.
+**Where we are:** Supabase cutover **parts 1-3 are done + pushed** — OTP auth loop
+closed, follow-graph sync with write-through, predictions persisted, and
+**notifications sync with Realtime subscription** wired. All green: `tsc` · `lint` ·
+`build` (shared JS 87.5 kB) · Playwright 40/40. `main` == `origin/main`.
 
 **Two Sonik actions are still pending (one-time, no code):**
 1. **Supabase redirect allowlist** — add `https://krish2248.github.io/futology/onboarding`
@@ -123,8 +121,15 @@ on every `toggle*`, and predictions are persisted to the `predictions` table
    `/leagues/39`, a club page to confirm real data flows.
 2. **Vercel target** — deploy on Vercel with SSR middleware + Supabase cookie auth
    (separate from GH Pages demo). See `docs/SUPABASE_CUTOVER.md`.
-3. **Real-data swaps** — Reddit+RoBERTa sentiment, FBref player stats for transfer regressor.
-4. **Optional polish** — minimal real MatchDetail (overview-only) for real fixtures.
+3. **Prediction leagues + poll votes Supabase sync** — remaining Zustand slices not yet
+   wired: `predictionLeagues[]`, `pollVotes[]`.
+4. **Real-data swaps** — Reddit+RoBERTa sentiment, FBref player stats for transfer regressor.
+5. **Optional polish** — minimal real MatchDetail (overview-only) for real fixtures.
+
+**Session 29 additions (notifications):**
+- `futology/lib/supabase/notificationsSync.ts` — NEW (rehydrate, syncAdd, syncMarkRead, Realtime sub)
+- `futology/lib/store/session.ts` — MODIFIED (addNotification + markAllNotificationsRead now sync; settlePrediction delegates to addNotification; setNotifications + prependNotification actions)
+- `futology/components/providers/SupabaseSessionBridge.tsx` — MODIFIED (notifications rehydration + Realtime subscription on login/auth change)
 
 ---
 

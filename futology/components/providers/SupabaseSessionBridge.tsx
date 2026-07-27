@@ -50,13 +50,22 @@ export function SupabaseSessionBridge() {
         data: { session },
       } = await supabase.auth.getSession();
       if (!active) return;
+      let notifUnsub: (() => void) | null = null;
+
       async function rehydrateUser(userId: string) {
-        const [{ rehydrateFollows }, { rehydratePredictions }] = await Promise.all([
-          import("@/lib/supabase/followSync"),
-          import("@/lib/supabase/predictionsSync"),
-        ]);
+        const [{ rehydrateFollows }, { rehydratePredictions }, { rehydrateNotifications, subscribeToNotifications }] =
+          await Promise.all([
+            import("@/lib/supabase/followSync"),
+            import("@/lib/supabase/predictionsSync"),
+            import("@/lib/supabase/notificationsSync"),
+          ]);
         rehydrateFollows(userId);
         rehydratePredictions(userId);
+        rehydrateNotifications(userId);
+        notifUnsub?.();
+        notifUnsub = subscribeToNotifications(userId, (notification) => {
+          useSession.getState().prependNotification(notification);
+        });
       }
 
       if (session?.user) {
@@ -73,12 +82,16 @@ export function SupabaseSessionBridge() {
           useSession.getState().setAuthUser(user);
           rehydrateUser(user.id);
         } else if (event === "SIGNED_OUT") {
+          notifUnsub?.();
           // Only clear on an explicit sign-out — an empty INITIAL_SESSION
           // must not wipe a store that another path populated.
           useSession.getState().signOut();
         }
       });
-      unsubscribe = () => subscription.unsubscribe();
+      unsubscribe = () => {
+        subscription.unsubscribe();
+        notifUnsub?.();
+      };
     })();
 
     return () => {

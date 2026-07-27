@@ -7,13 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **Supabase notifications persistence + Realtime** — `lib/supabase/notificationsSync.ts` rehydrates notifications from Supabase on login, syncs new notifications and mark-all-read, and subscribes to realtime INSERT events so notifications appear instantly without polling.
+- **`prependNotification` store action** — prepends a fully-formed `AppNotification` to the store (used by the Realtime subscription) while deduplicating by `id` and capping at 30.
 - **Supabase follow-graph sync** — `lib/supabase/followSync.ts` rehydrates `user_followed_{leagues,clubs,players,tournaments}` from Supabase on login; write-through on every `toggle*` (upsert on follow, delete on unfollow). Gated on `isSupabaseConfigured()`, uses dynamic `import()` to keep `@supabase/ssr` out of the shared chunk.
 - **Supabase predictions persistence** — `lib/supabase/predictionsSync.ts` persists predictions to the `predictions` table: upsert on save, delete, and settle. Same gating + dynamic import discipline.
-- **Store hydration actions** — `setFollowedLeagues`, `setFollowedClubs`, `setFollowedPlayers`, `setFollowedTournaments`, `setPredictions` for rehydrating the Zustand store from Supabase.
-- **`SupabaseSessionBridge` now rehydrates follows + predictions** on every auth state change (initial session load and `onAuthStateChange`).
+- **Store hydration actions** — `setFollowedLeagues`, `setFollowedClubs`, `setFollowedPlayers`, `setFollowedTournaments`, `setPredictions`, `setNotifications` for rehydrating the Zustand store from Supabase.
 
 ### Changed
-- Session store `toggle*` and prediction actions (`upsertPrediction`, `deletePrediction`, `settlePrediction`) now fire fire-and-forget Supabase syncs via dynamic imports when Supabase is configured.
+- **`SupabaseSessionBridge` rehydrates follows + predictions + notifications** on every auth state change, and sets up a Realtime subscription for live notifications.
+- Session store `toggle*`, prediction actions (`upsertPrediction`, `deletePrediction`, `settlePrediction`), `addNotification`, and `markAllNotificationsRead` all fire fire-and-forget Supabase syncs via dynamic imports when Supabase is configured.
+- `settlePrediction` now delegates notification creation to `addNotification` instead of constructing it inline — ensures the Supabase sync path is consistent.
 
 ## [0.7.0] — 2026-05-24
 
