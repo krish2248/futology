@@ -12,14 +12,14 @@
 The whole front-end is demoable end-to-end. Building legitimate contributions through real code improvements.
 
 **Phase 0** ✅ shell complete
-**Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.) **Supabase cutover part 1 DONE (Session 28):** the live build is already Supabase-configured, and the auth loop is now closed — `SupabaseSessionBridge` mirrors the OTP session into the store so `AuthGate` recognizes real signed-in users. Follow-graph + predictions persistence are part 2.
+**Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.) **Supabase cutover DONE (Sessions 28-29):** the live build is already Supabase-configured, auth loop closed (`SupabaseSessionBridge` mirrors OTP session into store), follow-graph sync rehydrates `user_followed_*` from Supabase with write-through on toggle, and predictions persist to the `predictions` table.
 **Phase 2** ✅ demo-mode data layer + StandingsTable + MatchDetailSheet (6 tabs) + per-league pages + per-club pages (6 tabs) + per-player pages + **news feed**. (API routes deleted; `lib/api/client.ts` calls demo data directly.) **Real-data wiring DONE (Sessions 24-26):** standings, top scorers, and fixtures/live-scores all route through `*Auto` modules that hit the HF ML-service football-data.org proxy when `NEXT_PUBLIC_ML_API_URL` is set + the league is on the free tier, and fall back to demo otherwise. **Dormant until Sonik sets the secrets** (4 HF Space + 2 GitHub repo — see Session 24).
 **Phase 4** ✅ all 6 intelligence sub-pages
 **Phase 5** ✅ full prediction game loop, leagues, polls, leaders, notifications
 **Phase 6** ✅ all 7 wishlist features (Tournament Simulator, Match Momentum, Press Intensity, Referee Bias, Weather Impact, Injury Intelligence, Odds Movement Alerts)
-**Phase 7** 🔄 IN PROGRESS — ErrorBoundary ✅, Settings ✅, dark-lock indicator ✅, **GitHub Pages deploy with auto-CI workflow** ✅, **next-pwa service worker** ✅ (configured, needs testing), **Playwright E2E smoke tests** ✅ (setup complete). Outstanding: Lighthouse audit ≥ 90, Vercel + Supabase cutover.
+**Phase 7** 🔄 IN PROGRESS — ErrorBoundary ✅, Settings ✅, dark-lock indicator ✅, **GitHub Pages deploy with auto-CI workflow** ✅, **next-pwa service worker** ✅ (configured, needs testing), **Playwright E2E smoke tests** ✅ (setup complete). Outstanding: Lighthouse audit ≥ 90, Vercel target.
 
-When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The block just below is the cold-start playbook; full detail is in the Session 28 entry.
+When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The block just below is the cold-start playbook.
 
 ### Session 29 — 2026-07-28 (Supabase cutover, part 2 — follow-graph sync + predictions persistence)
 
@@ -73,6 +73,16 @@ shared chunk is unchanged from Session 28) · Playwright **40/40** (demo-mode
 behaviour unchanged — all sync functions gate on `isSupabaseConfigured()`, which
 is false in the local build).
 
+**Files changed (Session 29):**
+- `futology/lib/supabase/followSync.ts` — NEW (follow-graph rehydrate + sync)
+- `futology/lib/supabase/predictionsSync.ts` — NEW (predictions CRUD sync)
+- `futology/lib/store/session.ts` — MODIFIED (added setFollowed* + setPredictions; toggle* and prediction actions now fire dynamic import sync)
+- `futology/components/providers/SupabaseSessionBridge.tsx` — MODIFIED (rehydrates follows + predictions on auth change)
+- `SESSION.md` — MODIFIED (this entry)
+- `CHANGELOG.md` — MODIFIED (Unreleased section)
+
+**Commit:** `854b168` pushed to `origin/main`.
+
 **Still pending (Sonik actions, no code):**
 1. Add `https://krish2248.github.io/futology/onboarding` to Supabase redirect allowlist.
 2. Set 4 HF Space secrets + 2 GitHub repo secrets for ML/football-data.
@@ -81,12 +91,22 @@ is false in the local build).
 
 ## ▶ START HERE TOMORROW (cold-start playbook, as of Session 29 · 2026-07-28)
 
+**Quick resume commands:**
+```bash
+cd C:\Users\sonik\Desktop\New\Sick-Boy
+git status                              # confirm clean
+git log --oneline -5                    # latest: 854b168
+npx tsc --noEmit                        # should be clean
+npx playwright test                     # 40/40
+```
+Visit **https://krish2248.github.io/futology/** to see the live state.
+
 **Where we are:** Supabase cutover **part 1 + part 2 are done + pushed** — the OTP
 auth loop is closed (`SupabaseSessionBridge` mirrors the Supabase session), the
 follow-graph sync rehydrates `user_followed_*` tables on login with write-through
 on every `toggle*`, and predictions are persisted to the `predictions` table
 (upsert on save, delete, settle). All green: `tsc` · `lint` · `build` (shared JS
-87.5 kB) · Playwright 40/40. `main` == `origin/main`, working tree clean.
+87.5 kB) · Playwright 40/40. `main` == `origin/main`.
 
 **Two Sonik actions are still pending (one-time, no code):**
 1. **Supabase redirect allowlist** — add `https://krish2248.github.io/futology/onboarding`
@@ -98,11 +118,13 @@ on every `toggle*`, and predictions are persisted to the `predictions` table
    if it still says `mode:"stub"`, they're still unset and standings/scorers/fixtures
    keep serving demo data.
 
-**What's left (future sessions):**
-1. If the ML/football-data secrets have landed by then, run the live smoke-test
-   (Session 27 item #1).
-2. Vercel + Supabase cutover completion (SSR target, cookie-based middleware).
-3. Real-data swaps for sentiment (Reddit+RoBERTa) and transfer (FBref).
+**What's left (future sessions — pick any):**
+1. **Live smoke-test** — if Sonik set the ML/football-data secrets, open `/scores`,
+   `/leagues/39`, a club page to confirm real data flows.
+2. **Vercel target** — deploy on Vercel with SSR middleware + Supabase cookie auth
+   (separate from GH Pages demo). See `docs/SUPABASE_CUTOVER.md`.
+3. **Real-data swaps** — Reddit+RoBERTa sentiment, FBref player stats for transfer regressor.
+4. **Optional polish** — minimal real MatchDetail (overview-only) for real fixtures.
 
 ---
 
