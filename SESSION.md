@@ -12,14 +12,14 @@
 The whole front-end is demoable end-to-end. Building legitimate contributions through real code improvements.
 
 **Phase 0** ✅ shell complete
-**Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.) **Supabase cutover DONE (Sessions 28-29):** the live build is already Supabase-configured, auth loop closed (`SupabaseSessionBridge` mirrors OTP session into store), follow-graph sync rehydrates `user_followed_*` from Supabase with write-through on toggle, and predictions persist to the `predictions` table.
+**Phase 1** ✅ demo-mode login + onboarding + Cmd+K. (Middleware was replaced by client-side `AuthGate` to support static export.) **Supabase cutover DONE (Sessions 28-30):** the live build is already Supabase-configured, auth loop closed (`SupabaseSessionBridge` mirrors OTP session into store), follow-graph sync rehydrates `user_followed_*` from Supabase with write-through on toggle, predictions persist to the `predictions` table, prediction leagues sync (`prediction_leagues` + `prediction_league_members`), and poll votes persist via UPSERT.
 **Phase 2** ✅ demo-mode data layer + StandingsTable + MatchDetailSheet (6 tabs) + per-league pages + per-club pages (6 tabs) + per-player pages + **news feed**. (API routes deleted; `lib/api/client.ts` calls demo data directly.) **Real-data wiring DONE (Sessions 24-26):** standings, top scorers, and fixtures/live-scores all route through `*Auto` modules that hit the HF ML-service football-data.org proxy when `NEXT_PUBLIC_ML_API_URL` is set + the league is on the free tier, and fall back to demo otherwise. **Dormant until Sonik sets the secrets** (4 HF Space + 2 GitHub repo — see Session 24).
 **Phase 4** ✅ all 6 intelligence sub-pages
 **Phase 5** ✅ full prediction game loop, leagues, polls, leaders, notifications
 **Phase 6** ✅ all 7 wishlist features (Tournament Simulator, Match Momentum, Press Intensity, Referee Bias, Weather Impact, Injury Intelligence, Odds Movement Alerts)
 **Phase 7** 🔄 IN PROGRESS — ErrorBoundary ✅, Settings ✅, dark-lock indicator ✅, **GitHub Pages deploy with auto-CI workflow** ✅, **next-pwa service worker** ✅ (configured, needs testing), **Playwright E2E smoke tests** ✅ (setup complete). **Notifications Realtime subscription** ✅ (Supabase Realtime wired in bridge). Outstanding: Vercel target.
 
-When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The block just below is the cold-start playbook.
+When the user comes back to this project, start by reading `SESSION.md` and visiting the live URL. The block just below is the cold-start playbook. The latest session entry (Session 30) contains the "next session starts here" handoff.
 
 ### Session 29 — 2026-07-28 (Supabase cutover, part 2 — follow-graph sync + predictions persistence)
 
@@ -1952,7 +1952,22 @@ See bible §5 for the full target structure. We're building it incrementally per
 - `futology/components/providers/SupabaseSessionBridge.tsx` — rehydration of leagues and poll votes added to `rehydrateUser`.
 - All checks green: `tsc --noEmit` ✅, `npm run lint` ✅, `npm run build` ✅ (shared chunk 87.5 kB unchanged).
 
-**Next session pick-up:** Live smoke-test once Sonik sets ML/football-data secrets + Vercel deployment. Or — if secrets are still blocked — add a Realtime subscription on `prediction_league_members` (similar to what notifications have) to keep leaderboards live across sessions without a manual refresh.
+**next-session-starts-here**
+
+**Next session pick-up:**
+1. **Live smoke-test on futology.app** — once Sonik sets ML/football-data secrets (4 HF Space + 2 GitHub repo secrets from Session 24) + creates the Vercel project. Smoke-test: OTP login, follow toggle, create prediction, join league, vote in poll, get a notification pushed via Realtime.
+2. **If secrets still blocked** — add a Realtime subscription on `prediction_league_members` (parallel to `subscribeToNotifications` in `notificationsSync.ts`) so leaderboards update live across sessions without a manual refresh.
+3. **Leaderboard display names** — the store's `PredictionLeagueMember.displayName` is empty for synced leagues (no column in `prediction_league_members`). Could add a `display_name` column or join `user_profiles`.
+4. **Vercel target** — when Sonik creates the project, wire the GitHub Action for Vercel deploy alongside the existing GH Pages deploy.
+
+**All Supabase sync modules existing:**
+| File | Rehydration | Write-through | Realtime sub |
+|------|------------|---------------|--------------|
+| `followSync.ts` | ✅ | `toggleFollowTeam/Player` | ❌ |
+| `predictionsSync.ts` | ✅ | `upsertPrediction`, `deletePrediction`, `settlePrediction` | ❌ |
+| `notificationsSync.ts` | ✅ | `addNotification` (via bridge) | ✅ `subscribeToNotifications` |
+| `leaguesSync.ts` | ✅ | `createLeague`, `joinLeagueByCode`, `leaveLeague`, `recomputeStats` | ❌ |
+| `pollsSync.ts` | ✅ | `voteInPoll` | ❌ |
 
 ---
 
@@ -1977,7 +1992,7 @@ See bible §5 for the full target structure. We're building it incrementally per
 **To run the dev server:**
 
 ```bash
-cd "C:/Users/sonik/Desktop/Sick-Boy/futology"
+cd "C:/Users/sonik/Desktop/New/Sick-Boy/futology"
 npm install   # only if node_modules missing
 npm run dev
 ```
@@ -1987,6 +2002,6 @@ Then open http://localhost:3000.
 **To check the build:**
 
 ```bash
-cd "C:/Users/sonik/Desktop/Sick-Boy/futology"
+cd "C:/Users/sonik/Desktop/New/Sick-Boy/futology"
 npm run build
 ```
