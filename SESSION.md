@@ -1941,12 +1941,28 @@ See bible §5 for the full target structure. We're building it incrementally per
 
 ---
 
+### Session 30 — 2026-07-28 (Supabase cutover, part 3 — prediction leagues + poll votes sync)
+
+**Goal:** Complete Supabase cutover by syncing the remaining store slices: prediction leagues (`createLeague`, `joinLeagueByCode`, `leaveLeague`, `recomputeLeagueStats`) and poll votes (`voteInPoll`).
+
+**Delivered:**
+- `futology/lib/supabase/leaguesSync.ts` — `rehydrateLeagues`, `syncCreateLeague`, `syncJoinLeagueByCode`, `syncLeaveLeague`, `syncRecomputeStats`. Handles the 1:N `prediction_leagues` → `prediction_league_members` join. Leaderboard display names left as empty string (the store doesn't persist displayName to a member-specific column); `PredictionLeagueMember` displayName is available for a future enrichment step.
+- `futology/lib/supabase/pollsSync.ts` — `rehydratePollVotes`, `syncVoteInPoll` (UPSERT on `poll_id,user_id` conflict).
+- `futology/lib/store/session.ts` — new `setPredictionLeagues` / `setPollVotes` hydration actions; `createLeague`, `joinLeagueByCode`, `leaveLeague`, `recomputeLeagueStats`, `voteInPoll` all fire dynamic `import()` sync modules.
+- `futology/components/providers/SupabaseSessionBridge.tsx` — rehydration of leagues and poll votes added to `rehydrateUser`.
+- All checks green: `tsc --noEmit` ✅, `npm run lint` ✅, `npm run build` ✅ (shared chunk 87.5 kB unchanged).
+
+**Next session pick-up:** Live smoke-test once Sonik sets ML/football-data secrets + Vercel deployment. Or — if secrets are still blocked — add a Realtime subscription on `prediction_league_members` (similar to what notifications have) to keep leaderboards live across sessions without a manual refresh.
+
+---
+
 ## 🐛 Known Issues / Tech Debt
 
 - **Demo Supabase shim.** The login flow currently sets a `futology_session` cookie and stores user state in localStorage via Zustand. When the user provides Supabase keys, swap `lib/store/session.ts#signIn` to call `supabase.auth.signInWithOtp` and replace the cookie with the Supabase SSR session cookie. The middleware.ts contract (cookie present = authenticated) is intentionally swap-compatible.
 - **Demo data branches in API routes.** Each handler in `app/api/**` has a single `if (isDemoMode)` branch returning seeded data. Replacing the body of that branch with a `fetch` to RapidAPI / FastAPI is the entire Phase-2/3 cutover for that route. The route signature, response envelope (`{ data, demo }`) and Cache-Control header all stay the same.
 - **PredictionCard demo path on `/predictions`.** Still imports from `lib/data/demoPredictions` directly. Should be migrated to `/api/ml/predict-batch` (POST `[fixture_ids]`) once that endpoint exists.
 - **NotificationBell uses 3 hard-coded notifications.** Replace with a Supabase Realtime subscription on `notifications` table in Phase 5.
+- **Leaderboard display names empty for synced leagues.** The store's `PredictionLeagueMember.displayName` has no corresponding column in `prediction_league_members`. A future enrichment step should either add a `display_name` column or join `user_profiles`.
 - **`SearchModal` reads `lib/data/*` directly.** Could be migrated to `/api/football/search` for consistency, but the current local search is already debounced and fast — defer until there's a reason.
 - **Inline Tailwind components stand in for shadcn/ui primitives.** Working fine; decision deferred — install shadcn for the Sheet/Tabs/Dialog primitives in Phase 2 if a feature needs them, otherwise stay custom.
 

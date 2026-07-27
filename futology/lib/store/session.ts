@@ -135,6 +135,8 @@ type SessionState = {
   setFollowedTournaments: (tournaments: FollowedTournament[]) => void;
   setPredictions: (predictions: Prediction[]) => void;
   setNotifications: (notifications: AppNotification[]) => void;
+  setPredictionLeagues: (leagues: PredictionLeague[]) => void;
+  setPollVotes: (votes: PollVote[]) => void;
   prependNotification: (notification: AppNotification) => void;
   signOut: () => void;
   completeOnboarding: () => void;
@@ -290,6 +292,8 @@ export const useSession = create<SessionState>()(
   setFollowedTournaments: (tournaments) => set({ followedTournaments: tournaments }),
   setPredictions: (predictions) => set({ predictions }),
   setNotifications: (notifications) => set({ notifications }),
+  setPredictionLeagues: (leagues) => set({ predictionLeagues: leagues }),
+  setPollVotes: (votes) => set({ pollVotes: votes }),
   prependNotification: (notification) => {
     set((state) => ({
       notifications: [notification, ...state.notifications].filter(
@@ -450,31 +454,54 @@ export const useSession = create<SessionState>()(
           createdAt: new Date().toISOString(),
         };
         set((state) => ({ predictionLeagues: [league, ...state.predictionLeagues] }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/leaguesSync").then((m) =>
+            m.syncCreateLeague(name, description, isPublic),
+          );
+        }
         return league;
       },
 
       joinLeagueByCode: (inviteCode) => {
         const code = inviteCode.trim().toUpperCase();
         const u = get().user;
-        const league = get().predictionLeagues.find((l) => l.inviteCode === code);
-        if (!league) return null;
-        const userId = u?.id ?? "demo_anon";
-        if (league.members.some((m) => m.userId === userId)) return league;
-        const member: PredictionLeagueMember = {
-          userId,
-          displayName: u?.displayName ?? "You",
-          totalPoints: get().predictions.reduce((acc, p) => acc + p.pointsEarned, 0),
-          totalPredictions: get().predictions.length,
-          correctPredictions: get().predictions.filter((p) => p.pointsEarned > 0).length,
-          joinedAt: new Date().toISOString(),
-        };
-        const next: PredictionLeague = { ...league, members: [...league.members, member] };
-        set((state) => ({
-          predictionLeagues: state.predictionLeagues.map((l) =>
-            l.id === league.id ? next : l,
-          ),
-        }));
-        return next;
+        const existingLeague = get().predictionLeagues.find((l) => l.inviteCode === code);
+        if (existingLeague) {
+          const userId = u?.id ?? "demo_anon";
+          if (existingLeague.members.some((m) => m.userId === userId)) return existingLeague;
+          const member: PredictionLeagueMember = {
+            userId,
+            displayName: u?.displayName ?? "You",
+            totalPoints: get().predictions.reduce((acc, p) => acc + p.pointsEarned, 0),
+            totalPredictions: get().predictions.length,
+            correctPredictions: get().predictions.filter((p) => p.pointsEarned > 0).length,
+            joinedAt: new Date().toISOString(),
+          };
+          const next: PredictionLeague = { ...existingLeague, members: [...existingLeague.members, member] };
+          set((state) => ({
+            predictionLeagues: state.predictionLeagues.map((l) =>
+              l.id === existingLeague.id ? next : l,
+            ),
+          }));
+          if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+            import("@/lib/supabase/leaguesSync").then((m) => m.syncJoinLeagueByCode(inviteCode));
+          }
+          return next;
+        }
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/leaguesSync").then((m) => {
+            m.syncJoinLeagueByCode(inviteCode).then((synced) => {
+              if (synced) {
+                set((state) => ({
+                  predictionLeagues: state.predictionLeagues.some((l) => l.id === synced.id)
+                    ? state.predictionLeagues
+                    : [synced, ...state.predictionLeagues],
+                }));
+              }
+            });
+          });
+        }
+        return null;
       },
 
       leaveLeague: (leagueId) => {
@@ -489,6 +516,9 @@ export const useSession = create<SessionState>()(
             )
             .filter((l) => l.members.length > 0 || l.createdBy !== userId),
         }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/leaguesSync").then((m) => m.syncLeaveLeague(leagueId));
+        }
       },
 
       recomputeLeagueStats: () => {
@@ -507,6 +537,9 @@ export const useSession = create<SessionState>()(
             ),
           })),
         }));
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/leaguesSync").then((m) => m.syncRecomputeStats());
+        }
       },
 
       voteInPoll: (pollId, optionId) => {
@@ -519,6 +552,9 @@ export const useSession = create<SessionState>()(
             ],
           };
         });
+        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          import("@/lib/supabase/pollsSync").then((m) => m.syncVoteInPoll(pollId, optionId));
+        }
       },
 
       addNotification: (n) => {

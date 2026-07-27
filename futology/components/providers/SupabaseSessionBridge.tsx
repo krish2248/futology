@@ -53,15 +53,19 @@ export function SupabaseSessionBridge() {
       let notifUnsub: (() => void) | null = null;
 
       async function rehydrateUser(userId: string) {
-        const [{ rehydrateFollows }, { rehydratePredictions }, { rehydrateNotifications, subscribeToNotifications }] =
+        const [{ rehydrateFollows }, { rehydratePredictions }, { rehydrateNotifications, subscribeToNotifications }, { rehydrateLeagues }, { rehydratePollVotes }] =
           await Promise.all([
             import("@/lib/supabase/followSync"),
             import("@/lib/supabase/predictionsSync"),
             import("@/lib/supabase/notificationsSync"),
+            import("@/lib/supabase/leaguesSync"),
+            import("@/lib/supabase/pollsSync"),
           ]);
         rehydrateFollows(userId);
         rehydratePredictions(userId);
         rehydrateNotifications(userId);
+        rehydrateLeagues(userId);
+        rehydratePollVotes(userId);
         notifUnsub?.();
         notifUnsub = subscribeToNotifications(userId, (notification) => {
           useSession.getState().prependNotification(notification);
